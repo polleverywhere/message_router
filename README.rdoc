@@ -1,16 +1,53 @@
 = Message Router
 
-Message router is a DSL that helps route simple messages, like SMS and Tweets.
+Message router is a Sinatra-like DSL for processing simple messages, like SMS messages or Tweets.
 
-== Note on Patches/Pull Requests
- 
-* Fork the project.
-* Make your feature addition or bug fix.
-* Add tests for it. This is important so I don't break it in a
-  future version unintentionally.
-* Commit, do not mess with rakefile, version, or history.
-  (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
-* Send me a pull request. Bonus points for topic branches.
+== Example Code
+
+This is a contrived example for a Twitter message router, but it gives you an idea of how it works.
+
+    class TwitterRouter < MessageRouter
+      context :all_caps_with_numbers do
+        # All caps without numbers... but in a proc
+        context Proc.new{|r| r.message[:body] =~ /^[A-Z\s]+$/ } do
+          match /.+/ do
+            "STOP SHOUTING WITHOUT NUMBERS!"
+          end
+        end
+    
+        match /.+/ do
+          "STOP SHOUTING WITH NUMBERS!"
+        end
+      end
+  
+      match /hi dude/ do
+        "pleased to meet you"
+      end
+  
+      match /hi (\w+)/ do |name|
+        "how do you do #{name}"
+      end
+  
+      match /hola (\w+)/, :from => 'bradgessler' do |name|
+        "hello #{name} in spanish"
+      end
+  
+    private
+      def all_caps_with_numbers
+        message[:body] =~ /^[A-Z0-9\s]+$/
+      end
+    end
+
+And now some irb action.
+
+    >> TwitterRouter.new({:body => 'hi dude'}).dispatch
+    => "pleased to meet you"
+    >> TwitterRouter.new({:body => 'hi brad'}).dispatch
+    => "how do you do brad"
+    >> TwitterRouter.new({:body => 'HI BRAD 90'}).dispatch
+    => "STOP SHOUTING WITH NUMBERS!"
+    >> TwitterRouter.new({:body => 'HI BRAD'}).dispatch
+    => "STOP SHOUTING WITHOUT NUMBERS!"
 
 == License
 
