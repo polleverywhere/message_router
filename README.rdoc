@@ -2,6 +2,10 @@
 
 Message router is a Sinatra-like DSL for processing simple messages, like SMS messages or Tweets.
 
+== Installation
+
+    sudo gem install message_router
+
 == Example Code
 
 This is a contrived example for a Twitter message router, but it gives you an idea of how it works.

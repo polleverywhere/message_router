@@ -26,6 +26,7 @@ Gem::Specification.new do |s|
      "lib/message_router.rb",
      "lib/message_router/context.rb",
      "lib/message_router/matcher.rb",
+     "message_router.gemspec",
      "spec/message_dispatcher_spec.rb",
      "spec/routers.rb",
      "spec/spec.opts",
