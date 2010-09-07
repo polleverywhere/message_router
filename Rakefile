@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "message_router"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Route small messages, like SMS and Tweets}
+    gem.description = %Q{Message Router is a Sinatra like DSL that deals with routing small, non-web messages, like Tweets or SMS messages.}
     gem.email = "brad@bradgessler.com"
     gem.homepage = "http://github.com/bradgessler/message_router"
     gem.authors = ["Brad Gessler"]
