@@ -1,10 +1,12 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+
 require 'message_router'
 require 'rubygems'
-require 'spec'
-require 'spec/autorun'
+require 'bundler'
+Bundler.setup(:test)
 
-Spec::Runner.configure do |config|
-  
+require 'rspec'
+
+RSpec.configure do |config|
 end
