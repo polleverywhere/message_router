@@ -21,6 +21,10 @@ class MessageRouter
     def routes
       @routes ||= []
     end
+    
+    def dispatch(message)
+      new(message).dispatch
+    end
   end
   
   attr_accessor :message

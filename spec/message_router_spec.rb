@@ -70,27 +70,27 @@ describe MessageRouter do
   
   context "default matcher" do
     it "should capture regexps" do
-      TwitterRouter.new({:body => 'hi dude'}).dispatch.should eql('pleased to meet you')
+      TwitterRouter.dispatch({:body => 'hi dude'}).should eql('pleased to meet you')
     end
     
     it "should pass regexp captures through blocks" do
-      TwitterRouter.new({:body => 'hi brad'}).dispatch.should eql("how do you do brad")
+      TwitterRouter.dispatch({:body => 'hi brad'}).should eql("how do you do brad")
     end
   end
   
   context "hash matcher" do
     it "should capture with default matcher" do
-      TwitterRouter.new({:from => 'bradgessler', :body => 'hola jeannette'}).dispatch.should eql("hello jeannette in spanish")
+      TwitterRouter.dispatch({:from => 'bradgessler', :body => 'hola jeannette'}).should eql("hello jeannette in spanish")
     end
   end
   
   context "context" do
     it "should handle contexts and non-proc conditions" do
-      TwitterRouter.new({:body => 'HI BRAD 90'}).dispatch.should eql("STOP SHOUTING WITH NUMBERS!")
+      TwitterRouter.dispatch({:body => 'HI BRAD 90'}).should eql("STOP SHOUTING WITH NUMBERS!")
     end
     
     it "should handle nested contexts and proc conditions" do
-      TwitterRouter.new({:body => 'HI BRAD'}).dispatch.should eql("STOP SHOUTING WITHOUT NUMBERS!")
+      TwitterRouter.dispatch({:body => 'HI BRAD'}).should eql("STOP SHOUTING WITHOUT NUMBERS!")
     end
   end
 end
