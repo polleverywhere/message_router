@@ -9,7 +9,7 @@ class MessageRouter
       if args = context_proc.call(router)
         klass = Class.new(router.class)
         klass.instance_exec(*args, &block)
-        klass.new(router.message).dispatch
+        klass.dispatch(router.message)
       end
     end
     
