@@ -58,6 +58,14 @@ describe MessageRouter do
     match /hi dude/ do
       "pleased to meet you"
     end
+
+    match /hi halt (\w+)/ do |word|
+      halt word
+    end
+
+    match /hi halt/ do
+      halt
+    end
     
     match /hi (\w+)/ do |name|
       "how do you do #{name}"
@@ -72,6 +80,20 @@ describe MessageRouter do
       if message[:body] =~ /^[A-Z0-9\s]+$/
         ["Zeldzamar", 1080]
       end
+    end
+  end
+
+  it "should return nil if there are no matches" do
+    TwitterRouter.dispatch(:body => "").should be_nil
+  end
+
+  context "should halt" do
+    it "without value" do
+      TwitterRouter.dispatch(:body => "hi halt").should be_nil
+    end
+
+    it "with value" do
+      TwitterRouter.dispatch(:body => "hi halt narf").should eql("narf")
     end
   end
   
