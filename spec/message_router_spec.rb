@@ -35,7 +35,12 @@ describe MessageRouter::Matcher do
 end
 
 describe MessageRouter do
-  
+  class CrazyTimesRouter < MessageRouter
+    match /^crazy$/ do
+      "factory blow out sales are awesome"
+    end
+  end
+
   # Test case router
   class TwitterRouter < MessageRouter
     context :all_caps_with_numbers do |funny_word, high_def_resolution|
@@ -54,6 +59,8 @@ describe MessageRouter do
         "STOP SHOUTING WITH NUMBERS!"
       end
     end
+
+    mount CrazyTimesRouter
 
     match /hi dude/ do
       "pleased to meet you"
@@ -84,7 +91,13 @@ describe MessageRouter do
   end
 
   it "should return nil if there are no matches" do
-    TwitterRouter.dispatch(:body => "").should be_nil
+    TwitterRouter.dispatch(:body => "bums").should be_nil
+  end
+
+  context "mounted router" do
+    it "should process message" do
+      TwitterRouter.dispatch(:body => "crazy").should eql("factory blow out sales are awesome")
+    end
   end
 
   context "should halt" do
