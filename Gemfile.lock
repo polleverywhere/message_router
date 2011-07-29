@@ -1,3 +1,8 @@
+PATH
+  remote: .
+  specs:
+    message_router (0.0.1)
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -33,5 +38,6 @@ DEPENDENCIES
   growl
   guard
   guard-rspec
+  message_router!
   rb-fsevent
   rspec

@@ -1,7 +1,7 @@
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__))
+require "message_router/version"
 
 class MessageRouter
-  
+
   autoload :Context,  'message_router/context'
   autoload :Matcher,  'message_router/matcher'
   autoload :Mount,    'message_router/mount'
