@@ -25,11 +25,11 @@ class MessageRouter
     
     def call(router)
       if match = match(router.message)
-        router.instance_exec(*match[self.class.default_param], &block)
+        router.instance_exec(*match[self.class.default_key], &block)
       end
     end
     
-    def self.default_param
+    def self.default_key
       :body
     end
     
@@ -38,11 +38,11 @@ class MessageRouter
   
     def normalize_params(*args)
       if args.size == 2
-        args.last.merge(self.class.default_param => args.first)
+        args.last.merge(self.class.default_key => args.first)
       elsif args.size == 1 and args.first.is_a?(Hash)
         args.first
       elsif args.size == 1
-        { self.class.default_param => args.first }
+        { self.class.default_key => args.first }
       end
     end
   end

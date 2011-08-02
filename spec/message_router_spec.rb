@@ -30,14 +30,14 @@ describe MessageRouter::Matcher do
   end
   
   it "should default matcher param to :body" do
-    MessageRouter::Matcher.default_param.should eql(:body)
+    MessageRouter::Matcher.default_key.should eql(:body)
   end
 end
 
 describe MessageRouter do
   class CrazyTimesRouter < MessageRouter
     match /^crazy$/ do
-      "factory blow out sales are awesome"
+      halt "factory blow out sales are awesome"
     end
   end
 
@@ -45,25 +45,25 @@ describe MessageRouter do
   class TwitterRouter < MessageRouter
     context :all_caps_with_numbers do |funny_word, high_def_resolution|
       match /FUNNYWORD/i do
-        "#{funny_word}-#{high_def_resolution}"
+        halt "#{funny_word}-#{high_def_resolution}"
       end
 
       # All caps without numbers... but in a proc
       context Proc.new{|r| r.message[:body] =~ /^[A-Z\s]+$/ } do
         match /.+/ do
-          "STOP SHOUTING WITHOUT NUMBERS!"
+          halt "STOP SHOUTING WITHOUT NUMBERS!"
         end
       end
 
       match /.+/ do
-        "STOP SHOUTING WITH NUMBERS!"
+        halt "STOP SHOUTING WITH NUMBERS!"
       end
     end
 
     mount CrazyTimesRouter
 
     match /hi dude/ do
-      "pleased to meet you"
+      halt "pleased to meet you"
     end
 
     match /hi halt (\w+)/ do |word|
@@ -75,11 +75,11 @@ describe MessageRouter do
     end
     
     match /hi (\w+)/ do |name|
-      "how do you do #{name}"
+      halt "how do you do #{name}"
     end
     
     match /hola (\w+) (\w+)/, :from => 'bradgessler' do |first_name, last_name|
-      "hello #{first_name} #{last_name} in spanish"
+      halt "hello #{first_name} #{last_name} in spanish"
     end
     
   private
@@ -90,53 +90,66 @@ describe MessageRouter do
     end
   end
 
+  def dispatch(*args)
+    reply = TwitterRouter.dispatch(*args)
+    reply ? reply[:body] : nil
+  end
+
   it "should return nil if there are no matches" do
-    TwitterRouter.dispatch(:body => "bums").should be_nil
+    dispatch("bums").should be_nil
+  end
+
+  it "should have default key" do
+    TwitterRouter.new.default_key.should eql(:body)
   end
 
   context "mounted router" do
     it "should process message" do
-      TwitterRouter.dispatch(:body => "crazy").should eql("factory blow out sales are awesome")
+      dispatch("crazy").should eql("factory blow out sales are awesome")
     end
   end
 
   context "should halt" do
     it "without value" do
-      TwitterRouter.dispatch(:body => "hi halt").should be_nil
+      dispatch("hi halt").should be_nil
     end
 
     it "with value" do
-      TwitterRouter.dispatch(:body => "hi halt narf").should eql("narf")
+      dispatch("hi halt narf").should eql("narf")
     end
   end
   
   context "default matcher" do
     it "should capture regexps" do
-      TwitterRouter.dispatch(:body => 'hi dude').should eql('pleased to meet you')
+      dispatch('hi dude').should eql('pleased to meet you')
     end
     
     it "should pass regexp captures through blocks" do
-      TwitterRouter.dispatch(:body => 'hi brad').should eql("how do you do brad")
+      dispatch('hi brad').should eql("how do you do brad")
     end
   end
   
   context "hash matcher" do
     it "should capture with default matcher" do
-      TwitterRouter.dispatch(:from => 'bradgessler', :body => 'hola jeannette gessler').should eql("hello jeannette gessler in spanish")
+      dispatch('hola jeannette gessler', :from => 'bradgessler').should eql("hello jeannette gessler in spanish")
+    end
+
+    it "should capture with an explicit hash" do
+      dispatch(:body => 'hola jeannette gessler', :from => 'bradgessler').should eql("hello jeannette gessler in spanish")
     end
   end
   
   context "context" do
     it "should handle contexts and non-proc conditions" do
-      TwitterRouter.dispatch(:body => 'HI BRAD 90').should eql("STOP SHOUTING WITH NUMBERS!")
+      dispatch('HI BRAD 90').should eql("STOP SHOUTING WITH NUMBERS!")
     end
     
     it "should handle nested contexts and proc conditions" do
-      TwitterRouter.dispatch(:body => 'HI BRAD').should eql("STOP SHOUTING WITHOUT NUMBERS!")
+      dispatch('HI BRAD').should eql("STOP SHOUTING WITHOUT NUMBERS!")
     end
     
     it "should pass arguments into contexts" do
-      TwitterRouter.dispatch(:body => 'FUNNYWORD').should eql("Zeldzamar-1080")
+      dispatch('FUNNYWORD').should eql("Zeldzamar-1080")
     end
   end
 end

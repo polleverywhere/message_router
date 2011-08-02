@@ -44,14 +44,14 @@ This is a contrived example for a Twitter message router, but it gives you an id
 
 And now some irb action.
 
-    >> TwitterRouter.new({:body => 'hi dude'}).dispatch
-    => "pleased to meet you"
-    >> TwitterRouter.new({:body => 'hi brad'}).dispatch
-    => "how do you do brad"
-    >> TwitterRouter.new({:body => 'HI BRAD 90'}).dispatch
-    => "STOP SHOUTING WITH NUMBERS!"
-    >> TwitterRouter.new({:body => 'HI BRAD'}).dispatch
-    => "STOP SHOUTING WITHOUT NUMBERS!"
+    >> TwitterRouter.new(:body => 'hi dude').dispatch
+    => {:body => "pleased to meet you"}
+    >> TwitterRouter.new(:body => 'hi brad').dispatch
+    => {:body => "how do you do brad"}
+    >> TwitterRouter.new(:body => 'HI BRAD 90').dispatch
+    => {:body => "STOP SHOUTING WITH NUMBERS!"}
+    >> TwitterRouter.new(:body => 'HI BRAD').dispatch
+    => {:body => "STOP SHOUTING WITHOUT NUMBERS!"}
 
 == License
 

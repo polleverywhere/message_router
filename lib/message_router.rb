@@ -27,20 +27,20 @@ class MessageRouter
       routes.push proc
     end
 
-    def dispatch(message)
-      new(message).dispatch
+    def dispatch(*args)
+      new(*args).dispatch
     end
   end
 
   attr_accessor :message, :halted_value
 
-  def initialize(message)
-    @message = message
+  def initialize(*args)
+    @message = normalize_arguments(*args)
   end
 
-  def halt(val=nil)
+  def halt(val=nil, opts={})
     @halted = true
-    @halted_value = val
+    @halted_value = normalize_arguments(val, opts)
   end
 
   def halted?
@@ -58,5 +58,16 @@ class MessageRouter
       end
     end
     return nil # If nothing is matched, we get here and we should return a nil
+  end
+
+  def default_key
+    :body
+  end
+
+private
+  # Make our router accept the first argument as the default message key, then optional keys last.
+  def normalize_arguments(message=nil, opts={})
+    message = opts.merge(:body => message) unless message.is_a? Hash and opts.empty?
+    message
   end
 end
