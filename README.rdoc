@@ -1,6 +1,6 @@
 = Message Router
 
-Message router is a Sinatra-like DSL for processing simple messages, like SMS messages or Tweets.
+Message router is a DSL for routing and processing simple messages, like SMS messages or Tweets.
 
 == Installation
 
@@ -8,54 +8,16 @@ Message router is a Sinatra-like DSL for processing simple messages, like SMS me
 
 == Example Code
 
-This is a contrived example for a Twitter message router, but it gives you an idea of how it works.
-
-    class TwitterRouter < MessageRouter
-      context :all_caps_with_numbers do
-        # All caps without numbers... but in a proc
-        context Proc.new{|r| r.message[:body] =~ /^[A-Z\s]+$/ } do
-          match /.+/ do
-            "STOP SHOUTING WITHOUT NUMBERS!"
-          end
-        end
-    
-        match /.+/ do
-          "STOP SHOUTING WITH NUMBERS!"
-        end
-      end
-  
-      match /hi dude/ do
-        "pleased to meet you"
-      end
-  
-      match /hi (\w+)/ do |name|
-        "how do you do #{name}"
-      end
-  
-      match /hola (\w+)/, :from => 'bradgessler' do |name|
-        "hello #{name} in spanish"
-      end
-  
-    private
-      def all_caps_with_numbers
-        message[:body] =~ /^[A-Z0-9\s]+$/
-      end
-    end
+TODO
 
 And now some irb action.
 
-    >> TwitterRouter.new(:body => 'hi dude').dispatch
-    => {:body => "pleased to meet you"}
-    >> TwitterRouter.new(:body => 'hi brad').dispatch
-    => {:body => "how do you do brad"}
-    >> TwitterRouter.new(:body => 'HI BRAD 90').dispatch
-    => {:body => "STOP SHOUTING WITH NUMBERS!"}
-    >> TwitterRouter.new(:body => 'HI BRAD').dispatch
-    => {:body => "STOP SHOUTING WITHOUT NUMBERS!"}
+TODO
+
 
 == License
 
-Copyright (c) 2010, Brad Gessler
+Copyright (c) 2009-2012, Brad Gessler
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

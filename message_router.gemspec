@@ -5,8 +5,8 @@ require "message_router/version"
 Gem::Specification.new do |s|
   s.name        = "message_router"
   s.version     = MessageRouter::VERSION
-  s.authors     = ["Brad Gessler"]
-  s.email       = ["brad@bradgessler.com"]
+  s.authors     = ["Brad Gessler", "Paul Cortens"]
+  s.email       = ["brad@bradgessler.com", "paul@thoughtless.ca"]
   s.homepage    = ""
   s.summary     = %q{Route messages}
   s.description = %q{a DSL for routing SMS, Twitter, and other short message formats.}

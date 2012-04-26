@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    message_router (0.0.2)
+    message_router (0.1.0)
 
 GEM
   remote: http://rubygems.org/
