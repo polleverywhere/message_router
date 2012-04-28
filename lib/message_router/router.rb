@@ -36,6 +36,16 @@ class MessageRouter
         match(Proc.new { |message| message[:body] && message[:body] == should_i }, do_this)
       when TrueClass, FalseClass
         match(Proc.new { should_i }, do_this)
+      when Symbol
+        match(Proc.new do |message|
+          if self.method(should_i).arity == 0
+            # Method won't accept arguments
+            self.send should_i
+          else
+            # Method will accept arguments. Try sending the message.
+            self.send should_i, message
+          end
+        end, do_this)
       else
         # Assume it already responds to #call.
         @rules << [should_i, do_this]

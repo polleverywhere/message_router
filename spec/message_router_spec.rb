@@ -28,6 +28,15 @@ describe MessageRouter::Router do
       def router
         MessageRouter::Router.build do
           match($thing_to_match, lambda { $did_it_run = true } )
+
+          # Using these methods also proves that the message is optionally
+          # accessable by helper methods.
+          def always_true(message)
+            message[:body] == 'hello world'
+          end
+          def always_false
+            false
+          end
         end
       end
 
@@ -62,6 +71,10 @@ describe MessageRouter::Router do
 
       it 'accepts a string to match against the message body' do
         the_test.call :true => 'hello world', :false => 'hello'
+      end
+
+      it 'accepts a symbol which is a method name' do
+        the_test.call :true => :always_true, :false => :always_false
       end
 
       describe 'matching a hash' do
