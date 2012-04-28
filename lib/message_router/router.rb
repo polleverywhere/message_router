@@ -30,10 +30,8 @@ class MessageRouter
 
     def match should_i, do_this
       case should_i
-      when Regexp
-        match(Proc.new { |message| message[:body] && message[:body] =~ should_i }, do_this)
-      when String
-        match(Proc.new { |message| message[:body] && message[:body] == should_i }, do_this)
+      when Regexp, String
+        match({:body => should_i}, do_this)
       when TrueClass, FalseClass
         match(Proc.new { should_i }, do_this)
       when Symbol
@@ -44,6 +42,19 @@ class MessageRouter
           else
             # Method will accept arguments. Try sending the message.
             self.send should_i, message
+          end
+        end, do_this)
+      when Hash
+        match(Proc.new do |message|
+          should_i.all? do |key, val|
+            case val
+            when String
+              message[key] == val
+            when Regexp
+              message[key] =~ val
+            else
+              raise "Unexpected value '#{val.inspect}'. Should be String or Regexp."
+            end
           end
         end, do_this)
       else

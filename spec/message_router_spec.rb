@@ -78,8 +78,30 @@ describe MessageRouter::Router do
       end
 
       describe 'matching a hash' do
-        it 'accepts a string to match against the hash key'
-        it 'accepts a regex to match against the hash key'
+        it 'accepts a string to match against the hash key' do
+          the_test.call(
+            :true => {
+              :from => '15554443333',
+              :to   => '12345'
+            },
+            :false => {
+              :from => 'something-else',
+              :to   => '12345'
+            }
+          )
+        end
+        it 'accepts a regex to match against the hash key' do
+          the_test.call(
+            :true => {
+              :from => /\A1555\d{7}\Z/,
+              :to   => /\A\d{5}\Z/
+            },
+            :false => {
+              :from => /\A1555\d{7}\Z/,
+              :to   => /\A\d{6}\Z/
+            }
+          )
+        end
       end
     end
   end
