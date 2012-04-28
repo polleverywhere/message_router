@@ -32,8 +32,10 @@ class MessageRouter
       case should_i
       when Regexp, String
         match({:body => should_i}, do_this)
+
       when TrueClass, FalseClass
         match(Proc.new { should_i }, do_this)
+
       when Symbol
         match(Proc.new do |message|
           if self.method(should_i).arity == 0
@@ -44,6 +46,7 @@ class MessageRouter
             self.send should_i, message
           end
         end, do_this)
+
       when Hash
         match(Proc.new do |message|
           should_i.all? do |key, val|
@@ -57,6 +60,7 @@ class MessageRouter
             end
           end
         end, do_this)
+
       else
         # Assume it already responds to #call.
         @rules << [should_i, do_this]

@@ -30,7 +30,7 @@ describe MessageRouter::Router do
           match($thing_to_match, lambda { $did_it_run = true } )
 
           # Using these methods also proves that the message is optionally
-          # accessable by helper methods.
+          # passed to helper methods.
           def always_true(message)
             message[:body] == 'hello world'
           end
@@ -98,13 +98,14 @@ describe MessageRouter::Router do
             },
             :false => {
               :from => /\A1555\d{7}\Z/,
-              :to   => /\A\d{6}\Z/
+              :to   => /i don't match/
             }
           )
         end
       end
     end
   end
+
 
   describe "#call" do
     it "returns nil with no rules" do
