@@ -2,6 +2,7 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 # TODO: Maybe move this into a sub-directory
 describe MessageRouter::Router do
+
   describe ".build" do
     it "returns a Router" do
       r = MessageRouter::Router.build {}
@@ -9,10 +10,60 @@ describe MessageRouter::Router do
     end
 
     describe 'defining matchers' do
-      it 'accepts a boolean'
-      it 'accepts a proc which is passed the message'
-      it 'accepts a regex to match against the message body'
-      it 'accepts a string to match against the message body'
+      before do
+        # For use in confirming whether or not a proc was called.
+        $thing_to_match = $did_it_run = nil
+      end
+
+      let :message do
+        {
+          :body => 'hello world',
+          :from => '15554443333',
+          :to   => '12345'
+        }
+      end
+
+      # This needs to be a method (and not memoized by #let) so that
+      # $thing_to_match can change within a test.
+      def router
+        MessageRouter::Router.build do
+          match($thing_to_match, lambda { $did_it_run = true } )
+        end
+      end
+
+      let :the_test do
+        Proc.new do |opts|
+          $thing_to_match = opts[:true]
+          router.call(message)
+          $did_it_run.should == true
+          $did_it_run = nil # reset for next time
+
+          $thing_to_match = opts[:false]
+          router.call(message)
+          $did_it_run.should == nil
+          $did_it_run = nil # reset for next time
+        end
+      end
+
+      it 'accepts a boolean' do
+        the_test.call :true => true, :false => false
+      end
+
+      it 'accepts a proc which is passed the message' do
+        the_test.call(
+          :true  => Proc.new {|msg| msg[:to] == '12345'},
+          :false => Proc.new {|msg| msg[:to] == '54321'}
+        )
+      end
+
+      it 'accepts a regex to match against the message body' do
+        the_test.call :true => /hello/, :false => /bye bye/
+      end
+
+      it 'accepts a string to match against the message body' do
+        the_test.call :true => 'hello world', :false => 'hello'
+      end
+
       describe 'matching a hash' do
         it 'accepts a string to match against the hash key'
         it 'accepts a regex to match against the hash key'
