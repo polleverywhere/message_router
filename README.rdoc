@@ -8,12 +8,77 @@ Message router is a DSL for routing and processing simple messages, like SMS mes
 
 == Example Code
 
-TODO
+See rdoc for MessageRouter::Router.build (lib/message_router/router.rb) for examples.
 
 And now some irb action.
 
-TODO
+    :001 > HelloRouter = MessageRouter::Router.build do
+    :002 >       match /hi/ do |msg|
+    :003 >           puts "Hi there. You sent me: #{msg.inspect}"
+    :004?>         true # puts returns nil, and that would fail the matcher
+    :005?>       end
+    :006?>   end
+     => #<MessageRouter::Router:0x1cfad18 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<Proc:0x0000000001d2f338@(irb):2>]]> 
+    :007 > HelloRouter.call({:body => 'can you say hi to me?'})
+    Hi there. You sent me: {:body=>"can you say hi to me?"}
+     => true
+    :008 > MainRouter = MessageRouter::Router.build do
+    :009 >       match({:to => 'greeter'}, HelloRouter)
+    :010?>     match(true) do
+    :011 >           puts "WTF? I don't know how to do that!"
+    :012?>         true # puts returns nil, and that would fail the matcher
+    :013?>       end
+    :014?>   end
+     => #<MessageRouter::Router:0x192a238 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<MessageRouter::Router:0x1cfad18 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<Proc:0x0000000001d2f338@(irb):2>]]>], [#<Proc:0x0000000001d06000@~/message_router/lib/message_router/router.rb:129>, #<Proc:0x000000000192a5a8@(irb):10>]]> 
+    :015 > MainRouter.call({:body => 'can you say hi to me?'})
+    WTF? I don't know how to do that!
+     => true
+    :016 > MainRouter.call({:body => 'can you say hi to me?', :to => 'greeter'})
+    Hi there. You sent me: {:body=>"can you say hi to me?", :to=>"greeter"}
+     => true
 
+== TODO
+
+Get docs working nicely (formatting, etc.) with RDoc.
+
+Pass Regexp captures on to the proc when there is a match. Examples:
+    match /some (cool|awesome) thing/ do |message, match|
+      puts "You thought the thing was #{match[1]}"
+    end
+    match :some_attr => /some (cool|awesome) thing/, :body => /(.*)/ do |message, matches|
+      puts "You thought that #{matches[:body][1]} was #{matches[:some_attr][1]}"
+    end
+    -- OR --
+    match /some (cool|awesome) thing/ do |message|
+      puts "You thought the thing was #{message[:message_router_match][1]}"
+    end
+    match :some_attr => /some (cool|awesome) thing/, :body => /(.*)/ do |message|
+      puts "You thought that #{message[:message_router_matches][:body][1]} was #{message[:message_router_matches][:some_attr][1]}"
+    end
+
+Improve specs to minimize use of global variables. The idea below about passing copies of the message around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the message, and the final return value would be the message, which I could examine.
+
+Consider making the String matcher more flexible:
+* Allow case insensitive
+* Allow partial matches:
+  * starts with
+  * ends with
+  * contains
+
+Recursion detection: It could be done by having a specific key in the message hash for parents. Before sending #call to a matcher's proc we could run something like "message[:message_router_stack] << self". Then we could check the size of this. The maximum number of levels would need to be configurable to allow some recursion.
+* We could just rely on a stack overflow, but having recursion detection would make debugging easier.
+
+Make helper methods defined (or included) in parent routers available in sub routers. It could be done with delegation, but that might get messy. It may be easier to not implement this and just require the user to use sub-classing to get the desired behavior.
+
+Pass around copies of the message Hash instead of modifying the existing Hash in place.
+* This _might_ help with multi-threading
+  * Perhaps a parent router wants to delegate to 2 sub-routers which are independent of each other. The current implementation has a shared message object, so I couldn't use multi-threading, (though forking could work). I would have to trust the user to call #dup on at least one of the messages. With this new way, it is safe by default.
+* Convention would be for the 'should_i' Procs to return a copy of the message, either modified or not, depending on their needs.
+  * They would still return nil or false if they don't match.
+* We could also require (by convention only) that sub-routers also return a copy of the message (if they succeed) so this (optionally modified) message can be used for further routing.
+  * This would give the original router access to both the modified message and the original message.
+
+It might be nice to have the message available as an instance variable/method. Currently the message can only be passed as an argument to the proc because there is just 1 instance of the router which is used over and over again. If the router was a class and we instantiated a new instance of that class for each message, then this feature would probably be easy.
 
 == License
 
