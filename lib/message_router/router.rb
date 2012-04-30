@@ -31,7 +31,15 @@ class MessageRouter
 
     private
 
-    def match should_i, do_this
+    def match should_i, do_this=nil, &do_this_block
+      if do_this && do_this_block
+        raise ArgumentError, "You may not provide a block when a 2nd argument has been provided."
+      elsif do_this.nil? && do_this_block.nil?
+        raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
+      end
+
+      do_this ||= do_this_block
+
       case should_i
       when Regexp, String
         match({:body => should_i}, do_this)

@@ -10,102 +10,140 @@ describe MessageRouter::Router do
     end
 
     describe 'defining matchers' do
-      before do
-        # For use in confirming whether or not a proc was called.
-        $thing_to_match = $did_it_run = nil
-      end
+      describe '1st argument' do
+        before do
+          # For use in confirming whether or not a proc was called.
+          $thing_to_match = $did_it_run = nil
+        end
 
-      let :message do
-        {
-          :body => 'hello world',
-          :from => '15554443333',
-          :to   => '12345'
-        }
-      end
+        let :message do
+          {
+            :body => 'hello world',
+            :from => '15554443333',
+            :to   => '12345'
+          }
+        end
 
-      # This needs to be a method (and not memoized by #let) so that
-      # $thing_to_match can change within a test.
-      def router
-        MessageRouter::Router.build do
-          match($thing_to_match, lambda { $did_it_run = true } )
+        # This needs to be a method (and not memoized by #let) so that
+        # $thing_to_match can change within a test.
+        def router
+          MessageRouter::Router.build do
+            match($thing_to_match, lambda { $did_it_run = true } )
 
-          # Using these methods also proves that the message is optionally
-          # passed to helper methods.
-          def always_true(message)
-            message[:body] == 'hello world'
-          end
-          def always_false
-            false
+            # Using these methods also proves that the message is optionally
+            # passed to helper methods.
+            def always_true(message)
+              message[:body] == 'hello world'
+            end
+            def always_false
+              false
+            end
           end
         end
-      end
 
-      let :the_test do
-        Proc.new do |opts|
-          $thing_to_match = opts[:true]
-          router.call(message)
-          $did_it_run.should == true
-          $did_it_run = nil # reset for next time
+        let :the_test do
+          Proc.new do |opts|
+            $thing_to_match = opts[:true]
+            router.call(message)
+            $did_it_run.should == true
+            $did_it_run = nil # reset for next time
 
-          $thing_to_match = opts[:false]
-          router.call(message)
-          $did_it_run.should == nil
-          $did_it_run = nil # reset for next time
+            $thing_to_match = opts[:false]
+            router.call(message)
+            $did_it_run.should == nil
+            $did_it_run = nil # reset for next time
+          end
         end
-      end
 
-      it 'accepts a boolean' do
-        the_test.call :true => true, :false => false
-      end
+        it 'accepts a boolean' do
+          the_test.call :true => true, :false => false
+        end
 
-      it 'accepts a nil' do
-        # True is just here as a placeholder
-        the_test.call :true => true, :false => nil
-      end
+        it 'accepts a nil' do
+          # True is just here as a placeholder
+          the_test.call :true => true, :false => nil
+        end
 
-      it 'accepts a proc which is passed the message' do
-        the_test.call(
-          :true  => Proc.new {|msg| msg[:to] == '12345'},
-          :false => Proc.new {|msg| msg[:to] == '54321'}
-        )
-      end
-
-      it 'accepts a regex to match against the message body' do
-        the_test.call :true => /hello/, :false => /bye bye/
-      end
-
-      it 'accepts a string to match against the message body' do
-        the_test.call :true => 'hello world', :false => 'hello'
-      end
-
-      it 'accepts a symbol which is a method name' do
-        the_test.call :true => :always_true, :false => :always_false
-      end
-
-      describe 'matching a hash' do
-        it 'accepts a string to match against the hash key' do
+        it 'accepts a proc which is passed the message' do
           the_test.call(
-            :true => {
-              :from => '15554443333',
-              :to   => '12345'
-            },
-            :false => {
-              :from => 'something-else',
-              :to   => '12345'
-            }
+            :true  => Proc.new {|msg| msg[:to] == '12345'},
+            :false => Proc.new {|msg| msg[:to] == '54321'}
           )
         end
-        it 'accepts a regex to match against the hash key' do
-          the_test.call(
-            :true => {
-              :from => /\A1555\d{7}\Z/,
-              :to   => /\A\d{5}\Z/
-            },
-            :false => {
-              :from => /\A1555\d{7}\Z/,
-              :to   => /i don't match/
-            }
-          )
+
+        it 'accepts a regex to match against the message body' do
+          the_test.call :true => /hello/, :false => /bye bye/
+        end
+
+        it 'accepts a string to match against the message body' do
+          the_test.call :true => 'hello world', :false => 'hello'
+        end
+
+        it 'accepts a symbol which is a method name' do
+          the_test.call :true => :always_true, :false => :always_false
+        end
+
+        describe 'matching a hash' do
+          it 'accepts a string to match against the hash key' do
+            the_test.call(
+              :true => {
+                :from => '15554443333',
+                :to   => '12345'
+              },
+              :false => {
+                :from => 'something-else',
+                :to   => '12345'
+              }
+            )
+          end
+          it 'accepts a regex to match against the hash key' do
+            the_test.call(
+              :true => {
+                :from => /\A1555\d{7}\Z/,
+                :to   => /\A\d{5}\Z/
+              },
+              :false => {
+                :from => /\A1555\d{7}\Z/,
+                :to   => /i don't match/
+              }
+            )
+          end
+        end
+      end
+
+      describe '2nd argument' do
+        it 'accepts a Proc' do
+          message = {}
+          router = MessageRouter::Router.build do
+            match(true, Proc.new { |m| m[:did_it_run] = true })
+          end
+          router.call message
+          message[:did_it_run].should be_true
+        end
+
+        it 'accepts a block' do
+          message = {}
+          router = MessageRouter::Router.build do
+            match(true) { |m| m[:did_it_run] = true }
+          end
+          router.call message
+          message[:did_it_run].should be_true
+        end
+
+        it 'raises an execption when both a Proc and a block are given' do
+          lambda {
+            router = MessageRouter::Router.build do
+              match(true, Proc.new { |m| m[:did_it_run] = true }) { |m| m[:did_it_run] = true }
+            end
+          }.should raise_error(ArgumentError)
+        end
+
+        it 'raises an execption when neithr a Proc nor a block are given' do
+          lambda {
+            router = MessageRouter::Router.build do
+              match true
+            end
+          }.should raise_error(ArgumentError)
         end
       end
     end
