@@ -230,5 +230,33 @@ describe MessageRouter::Router do
 
       end
     end
+
+
+    describe 'helper methods' do
+      module MyTestHelper
+        LOOKUP = {
+          1 => 'John',
+          2 => 'Jim',
+          3 => 'Jules'
+        }
+        def lookup_human_name(message)
+          message[:human_name] = LOOKUP[message[:id]]
+        end
+      end
+
+      it 'can modify the message' do
+        router = MessageRouter::Router.build do
+          extend MyTestHelper
+          match(:lookup_human_name, Proc.new do |message|
+            $is_john = message[:human_name] == 'John'
+          end)
+        end
+
+        message = {:id => 1}
+        router.call(message).should be_true
+        $is_john.should be_true               # Prove the inner matcher can see the new value
+        message[:human_name].should == 'John' # Prove we can get at the value after the router has finished.
+      end
+    end
   end
 end
