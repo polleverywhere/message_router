@@ -16,11 +16,14 @@ class MessageRouter
 
     # Returns nil if no rules match
     # Returns true if a rule matched
+    # NOTE: It is assumed that a rule failed to match if the 'do_this' block
+    #       returns nil or false. This allows us to mount sub-routers and
+    #       continue trying other rules if those subrouters fail to match
+    #       something.
     def call(message)
       @rules.detect do |should_i, do_this|
         if should_i.call(message)
-          do_this.call message
-          return true
+          return true if do_this.call message
         end
       end
     end

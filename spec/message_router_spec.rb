@@ -165,7 +165,7 @@ describe MessageRouter::Router do
         $outer_matcher = true
         $inner_matcher = false
 
-        main_router.call({}).should be_true
+        main_router.call({}).should be_nil
         $did_outer_run.should be_true
         $did_inner_run.should be_nil
       end
@@ -215,6 +215,17 @@ describe MessageRouter::Router do
           $did_outer_run_2.should be_nil
           $did_inner_run_1.should be_true
           $did_inner_run_2.should be_nil
+        end
+
+        it "runs both outers, and 2nd inner when all but 1st inner match" do
+          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_2 = true
+          $inner_matcher_1 = false
+
+          main_router.call({}).should be_true
+          $did_outer_run_1.should be_true
+          $did_outer_run_2.should be_true
+          $did_inner_run_1.should be_nil
+          $did_inner_run_2.should be_true
         end
 
       end
