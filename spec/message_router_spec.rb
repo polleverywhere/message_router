@@ -28,7 +28,7 @@ describe MessageRouter::Router do
         # $thing_to_match can change within a test.
         def router
           MessageRouter::Router.build do
-            match($thing_to_match, lambda { $did_it_run = true } )
+            match($thing_to_match) { $did_it_run = true }
 
             # Using these methods also proves that the message is optionally
             # passed to helper methods.
@@ -159,7 +159,7 @@ describe MessageRouter::Router do
     context 'a rule matches' do
       subject do
         MessageRouter::Router.build do
-          match(true, lambda { $did_it_run = true } )
+          match(true) { $did_it_run = true }
         end
       end
 
@@ -177,13 +177,13 @@ describe MessageRouter::Router do
       def main_router
         MessageRouter::Router.build do
           sub_router = MessageRouter::Router.build do
-            match($inner_matcher, lambda { $did_inner_run = true } )
+            match($inner_matcher) { $did_inner_run = true }
           end
 
-          match($outer_matcher, lambda do |message|
+          match $outer_matcher do |message|
             $did_outer_run = true
             sub_router.call(message)
-          end)
+          end
         end
       end
 
@@ -226,22 +226,22 @@ describe MessageRouter::Router do
           MessageRouter::Router.build do
             # Define them
             sub_router_1 = MessageRouter::Router.build do
-              match($inner_matcher_1, lambda { $did_inner_run_1 = true } )
+              match($inner_matcher_1) { $did_inner_run_1 = true }
             end
             sub_router_2 = MessageRouter::Router.build do
-              match($inner_matcher_2, lambda { $did_inner_run_2 = true } )
+              match($inner_matcher_2) { $did_inner_run_2 = true }
             end
 
             # 'mount' them
-            match($outer_matcher_1, lambda do |message|
+            match $outer_matcher_1 do |message|
               $did_outer_run_1 = true
               sub_router_1.call(message)
-            end)
+            end
 
-            match($outer_matcher_2, lambda do |message|
+            match $outer_matcher_2 do |message|
               $did_outer_run_2 = true
               sub_router_2.call(message)
-            end)
+            end
           end
         end
 
@@ -285,9 +285,9 @@ describe MessageRouter::Router do
       it 'can modify the message' do
         router = MessageRouter::Router.build do
           extend MyTestHelper
-          match(:lookup_human_name, Proc.new do |message|
+          match :lookup_human_name do |message|
             $is_john = message[:human_name] == 'John'
-          end)
+          end
         end
 
         message = {:id => 1}
