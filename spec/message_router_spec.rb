@@ -58,6 +58,11 @@ describe MessageRouter::Router do
         the_test.call :true => true, :false => false
       end
 
+      it 'accepts a nil' do
+        # True is just here as a placeholder
+        the_test.call :true => true, :false => nil
+      end
+
       it 'accepts a proc which is passed the message' do
         the_test.call(
           :true  => Proc.new {|msg| msg[:to] == '12345'},
@@ -130,14 +135,89 @@ describe MessageRouter::Router do
       end
     end
 
-    it 'supports nested routers' do
-      pending
-      main_router = MessageRouter::Router.build do
-        sub_router = MessageRouter::Router.build do
-          match
+    describe 'nested routers' do
+      def main_router
+        MessageRouter::Router.build do
+          sub_router = MessageRouter::Router.build do
+            match($inner_matcher, lambda { $did_inner_run = true } )
+          end
+
+          match($outer_matcher, lambda do |message|
+            $did_outer_run = true
+            sub_router.call(message)
+          end)
         end
       end
 
+      before do
+        $outer_matcher = $inner_matcher = $did_outer_run = $did_inner_run = nil
+      end
+
+      it 'runs both when both match' do
+        $outer_matcher = $inner_matcher = true
+
+        main_router.call({}).should be_true
+        $did_outer_run.should be_true
+        $did_inner_run.should be_true
+      end
+
+      it "runs outer only when outer matches and inner doesn't" do
+        $outer_matcher = true
+        $inner_matcher = false
+
+        main_router.call({}).should be_true
+        $did_outer_run.should be_true
+        $did_inner_run.should be_nil
+      end
+
+      it "runs neither when inner matches and outer doesn't" do
+        $outer_matcher = false
+        $inner_matcher = true
+
+        main_router.call({}).should be_nil
+        $did_outer_run.should be_nil
+        $did_inner_run.should be_nil
+      end
+
+      context 'multiple inner matchers' do
+        before do
+          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = $did_outer_run_1 = $did_outer_run_2 = $did_inner_run_1 = $did_inner_run_2 = nil
+        end
+
+        def main_router
+          MessageRouter::Router.build do
+            # Define them
+            sub_router_1 = MessageRouter::Router.build do
+              match($inner_matcher_1, lambda { $did_inner_run_1 = true } )
+            end
+            sub_router_2 = MessageRouter::Router.build do
+              match($inner_matcher_2, lambda { $did_inner_run_2 = true } )
+            end
+
+            # 'mount' them
+            match($outer_matcher_1, lambda do |message|
+              $did_outer_run_1 = true
+              sub_router_1.call(message)
+            end)
+
+            match($outer_matcher_2, lambda do |message|
+              $did_outer_run_2 = true
+              sub_router_2.call(message)
+            end)
+          end
+        end
+
+        it "runs only 1st outer and 1st inner when all match" do
+          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = true
+
+          main_router.call({}).should be_true
+          $did_outer_run_1.should be_true
+          $did_outer_run_2.should be_nil
+          $did_inner_run_1.should be_true
+          $did_inner_run_2.should be_nil
+        end
+
+      end
     end
   end
 end

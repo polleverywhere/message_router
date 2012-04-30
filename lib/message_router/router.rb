@@ -33,7 +33,7 @@ class MessageRouter
       when Regexp, String
         match({:body => should_i}, do_this)
 
-      when TrueClass, FalseClass
+      when TrueClass, FalseClass, NilClass
         match(Proc.new { should_i }, do_this)
 
       when Symbol
