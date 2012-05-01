@@ -1,57 +1,58 @@
 class MessageRouter
+  # To define a router, subclass MessageRouter::Router, then call #match
+  # inside the class definition.
+  # An example:
+  #     class MyApp::Router::Application < MessageRouter::Router
+  #       # Share helpers between routers by including modules
+  #       include MyApp::Router::MyHelper
+  #
+  #       match(lamba { |env| env[:from].nil? }) do |env|
+  #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
+  #       end
+  #
+  #       match 'ping' do |env|
+  #         PingCounter.increment!
+  #         send_reply 'pong', env
+  #       end
+  #
+  #       match /\Ahelp/i do |env|
+  #         SupportQueue.contact_asap(env[:from])
+  #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
+  #       end
+  #
+  #       # StopRouter would have been defined just like this router.
+  #       match /\Astop/i, MyApp::Router::StopRouter
+  #
+  #       match :to => /(12345|54321)/ do |env|
+  #         Logger.warn "Use of deprecated short code: #{msg.inspect}"
+  #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
+  #       end
+  #
+  #       match :user_name do |env|
+  #         send_reply "I found you! Your name is #{user_name}.", env
+  #       end
+  #
+  #       match true do |env|
+  #         UserMessage.create! env
+  #         send_reply "Sorry we couldn't figure out how to handle your message. We have recorded it and someone will get back to you soon.", env
+  #       end
+  #
+  #
+  #       def send_reply(body, orig_msg)
+  #         OutgoingMessage.deliver!(:body => body, :to => orig_msg[:from], :from => orig_msg[:to])
+  #       end
+  #
+  #       def user_name(env)
+  #         env[:user_name] ||= User.find(env[:from])
+  #       end
+  #     end
+  #
+  #     router = MyApp::Router::Application.new
+  #     router.call({})  # Logs an error about not knowing who the message is from
+  #     router.call({:from => 'mr-smith', :body => 'ping'})  # Sends a 'pong' reply
+  #     router.call({:from => 'mr-smith', :to => 12345})     # Sends a deprecation warning reply
   class Router
 
-    # The main method for defining a router. Use this instead of .new.
-    # An example:
-    #     MyApp::Router::Application = MessageRouter::Router.build do
-    #       # Share helpers between routers by extending modules
-    #       extend MyApp::Router::MyHelper
-    #
-    #       match(lamba { |env| env[:from].nil? }) do |env|
-    #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
-    #       end
-    #
-    #       match 'ping' do |env|
-    #         PingCounter.increment!
-    #         send_reply 'pong', env
-    #       end
-    #
-    #       match /\Ahelp/i do |env|
-    #         SupportQueue.contact_asap(env[:from])
-    #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
-    #       end
-    #
-    #       # StopRouter would have been defined just like this router.
-    #       match /\Astop/i, MyApp::Router::StopRouter
-    #
-    #       match :to => /(12345|54321)/ do |env|
-    #         Logger.warn "Use of deprecated short code: #{msg.inspect}"
-    #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
-    #       end
-    #
-    #       match :user_name do |env|
-    #         send_reply "I found you! Your name is #{user_name}.", env
-    #       end
-    #
-    #       match true do |env|
-    #         UserMessage.create! env
-    #         send_reply "Sorry we couldn't figure out how to handle your message. We have recorded it and someone will get back to you soon.", env
-    #       end
-    #
-    #
-    #       def send_reply(body, orig_msg)
-    #         OutgoingMessage.deliver!(:body => body, :to => orig_msg[:from], :from => orig_msg[:to])
-    #       end
-    #
-    #       def user_name(env)
-    #         env[:user_name] ||= User.find(env[:from])
-    #       end
-    #     end
-    #
-    #     MyApp::Router::Application.call({})  # Logs an error about not knowing who the message is from
-    #     MyApp::Router::Application.call({:from => 'mr-smith', :body => 'ping'})  # Sends a 'pong' reply
-    #     MyApp::Router::Application.call({:from => 'mr-smith', :to => 12345})  # Sends a deprecation warning reply
-    #
     # The 1st argument to a matcher can be:
     # * true, false, or nil
     # * String or Regexp, which match against env[:body]. Strings require
@@ -74,15 +75,37 @@ class MessageRouter
     # allows us to mount sub-routers and continue trying other rules if those
     # subrouters fail to match something.
     # The 2nd argument to #match can also be specified with a block.
-    def self.build &block
-      router = Router.new
-      router.instance_eval &block
-      router
+    def self.match should_i, do_this=nil, &do_this_block
+      if do_this && do_this_block
+        raise ArgumentError, "You may not provide a block when a 2nd argument has been provided."
+      elsif do_this.nil? && do_this_block.nil?
+        raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
+      end
+
+      do_this ||= do_this_block
+
+      # Save the arguments for later.
+      rules << [should_i, do_this]
+    end
+
+    # The rules are defined at the class level. But any helper methods
+    # referenced by Symbols are defined/executed at the instance level.
+    def self.rules
+      @rules ||= []
     end
 
 
+    # This method initializes all the rules stored at the class level. When you
+    # create your subclass, if you want to add your own initializer, it is very
+    # important to call `super` or none of your rules will be matched.
     def initialize
       @rules = []
+      # Actually create the rules so that the procs we create are in the
+      # context of an instance of this object. This is most important when the
+      # rule is based on a symbol. We need that symbol to resolve to an
+      # instance method; however, instance methods are not available until
+      # after an instance is created.
+      self.class.rules.each {|rule| match *rule }
     end
 
     # Kicks off the router. 'env' is a Hash. The keys are up to the user;
@@ -110,7 +133,6 @@ class MessageRouter
 
 
     private
-
     def match should_i, do_this=nil, &do_this_block
       if do_this && do_this_block
         raise ArgumentError, "You may not provide a block when a 2nd argument has been provided."

@@ -4,10 +4,6 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 describe MessageRouter::Router do
 
   describe ".build" do
-    it "returns a Router" do
-      r = MessageRouter::Router.build {}
-      r.should be_kind_of MessageRouter::Router
-    end
 
     describe 'defining matchers' do
       describe '1st argument' do
@@ -27,7 +23,7 @@ describe MessageRouter::Router do
         # This needs to be a method (and not memoized by #let) so that
         # $thing_to_match can change within a test.
         def router
-          MessageRouter::Router.build do
+          Class.new MessageRouter::Router do
             match($thing_to_match) { $did_it_run = true }
 
             # Using these methods also proves that the message is optionally
@@ -38,7 +34,7 @@ describe MessageRouter::Router do
             def always_false
               false
             end
-          end
+          end.new
         end
 
         let :the_test do
@@ -114,35 +110,35 @@ describe MessageRouter::Router do
       describe '2nd argument' do
         it 'accepts a Proc' do
           env = {}
-          router = MessageRouter::Router.build do
+          router = Class.new MessageRouter::Router do
             match(true, Proc.new { |env| env[:did_it_run] = true })
-          end
+          end.new
           router.call env
           env[:did_it_run].should be_true
         end
 
         it 'accepts a block' do
           env = {}
-          router = MessageRouter::Router.build do
+          router = Class.new MessageRouter::Router do
             match(true) { |env| env[:did_it_run] = true }
-          end
+          end.new
           router.call env
           env[:did_it_run].should be_true
         end
 
         it 'raises an execption when both a Proc and a block are given' do
           lambda {
-            router = MessageRouter::Router.build do
+            router = Class.new MessageRouter::Router do
               match(true, Proc.new { |env| env[:did_it_run] = true }) { |env| env[:did_it_run] = true }
-            end
+            end.new
           }.should raise_error(ArgumentError)
         end
 
         it 'raises an execption when neithr a Proc nor a block are given' do
           lambda {
-            router = MessageRouter::Router.build do
+            router = Class.new MessageRouter::Router do
               match true
-            end
+            end.new
           }.should raise_error(ArgumentError)
         end
       end
@@ -152,15 +148,15 @@ describe MessageRouter::Router do
 
   describe "#call" do
     it "returns nil with no rules" do
-      r = MessageRouter::Router.build {}
+      r = MessageRouter::Router.new
       r.call({}).should be_nil
     end
 
     context 'a rule matches' do
       subject do
-        MessageRouter::Router.build do
+        Class.new MessageRouter::Router do
           match(true) { $did_it_run = true }
-        end
+        end.new
       end
 
       it "returns true when a rule matches" do
@@ -175,16 +171,16 @@ describe MessageRouter::Router do
 
     describe 'nested routers' do
       def main_router
-        MessageRouter::Router.build do
-          sub_router = MessageRouter::Router.build do
+        Class.new(MessageRouter::Router) do
+          sub_router = Class.new(MessageRouter::Router) do
             match($inner_matcher) { $did_inner_run = true }
-          end
+          end.new
 
           match $outer_matcher do |env|
             $did_outer_run = true
             sub_router.call(env)
           end
-        end
+        end.new
       end
 
       before do
@@ -223,14 +219,14 @@ describe MessageRouter::Router do
         end
 
         def main_router
-          MessageRouter::Router.build do
+          Class.new MessageRouter::Router do
             # Define them
-            sub_router_1 = MessageRouter::Router.build do
+            sub_router_1 = Class.new MessageRouter::Router do
               match($inner_matcher_1) { $did_inner_run_1 = true }
-            end
-            sub_router_2 = MessageRouter::Router.build do
+            end.new
+            sub_router_2 = Class.new MessageRouter::Router do
               match($inner_matcher_2) { $did_inner_run_2 = true }
-            end
+            end.new
 
             # 'mount' them
             match $outer_matcher_1 do |env|
@@ -242,7 +238,7 @@ describe MessageRouter::Router do
               $did_outer_run_2 = true
               sub_router_2.call(env)
             end
-          end
+          end.new
         end
 
         it "runs only 1st outer and 1st inner when all match" do
@@ -283,16 +279,16 @@ describe MessageRouter::Router do
       end
 
       it 'can modify the env' do
-        router = MessageRouter::Router.build do
-          extend MyTestHelper
+        router = Class.new MessageRouter::Router do
+          include MyTestHelper
           match :lookup_human_name do |env|
             $is_john = env[:human_name] == 'John'
           end
-        end
+        end.new
 
         env = {:id => 1}
         router.call(env).should be_true
-        $is_john.should be_true               # Prove the inner matcher can see the new value
+        $is_john.should be_true           # Prove the inner matcher can see the new value
         env[:human_name].should == 'John' # Prove we can get at the value after the router has finished.
       end
     end

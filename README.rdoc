@@ -12,30 +12,31 @@ See rdoc for MessageRouter::Router.build (lib/message_router/router.rb) for exam
 
 And now some irb action.
 
-    :001 > HelloRouter = MessageRouter::Router.build do
-    :002 >       match /hi/ do |msg|
-    :003 >           puts "Hi there. You sent me: #{msg.inspect}"
-    :004?>         true # puts returns nil, and that would fail the matcher
-    :005?>       end
-    :006?>   end
-     => #<MessageRouter::Router:0x1cfad18 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<Proc:0x0000000001d2f338@(irb):2>]]> 
-    :007 > HelloRouter.call({:body => 'can you say hi to me?'})
+    1.8.7 :001 > class HelloRouter < MessageRouter::Router
+    1.8.7 :002?>     match /hi/ do |msg|
+    1.8.7 :003 >           puts "Hi there. You sent me: #{msg.inspect}"
+    1.8.7 :004?>         true # puts returns nil, and that would fail the matcher
+    1.8.7 :005?>       end
+    1.8.7 :006?>   end
+     => [[/hi/, #<Proc:0x00000000026963b8@(irb):2>]] 
+    1.8.7 :007 > HelloRouter.new.call({:body => 'can you say hi to me?'})
     Hi there. You sent me: {:body=>"can you say hi to me?"}
-     => true
-    :008 > MainRouter = MessageRouter::Router.build do
-    :009 >       match({:to => 'greeter'}, HelloRouter)
-    :010?>     match(true) do
-    :011 >           puts "WTF? I don't know how to do that!"
-    :012?>         true # puts returns nil, and that would fail the matcher
-    :013?>       end
-    :014?>   end
-     => #<MessageRouter::Router:0x192a238 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<MessageRouter::Router:0x1cfad18 @rules=[[#<Proc:0x0000000001cfc398@~/message_router/lib/message_router/router.rb:143>, #<Proc:0x0000000001d2f338@(irb):2>]]>], [#<Proc:0x0000000001d06000@~/message_router/lib/message_router/router.rb:129>, #<Proc:0x000000000192a5a8@(irb):10>]]> 
-    :015 > MainRouter.call({:body => 'can you say hi to me?'})
+     => true 
+    1.8.7 :008 > class MainRouter < MessageRouter::Router
+    1.8.7 :009?>     match({:to => 'greeter'}, HelloRouter.new)
+    1.8.7 :010?>     match(true) do
+    1.8.7 :011 >           puts "WTF? I don't know how to do that!"
+    1.8.7 :012?>         true # puts returns nil, and that would fail the matcher
+    1.8.7 :013?>       end
+    1.8.7 :014?>   end
+     => [[{:to=>"greeter"}, #<HelloRouter:0x25fef90 @rules=[[#<Proc:0x000000000266b2d0@/home/paul/sc/pe/message_router/lib/message_router/router.rb:165>, #<Proc:0x00000000026963b8@(irb):2>]]>], [true, #<Proc:0x00000000025ff580@(irb):10>]] 
+    1.8.7 :015 > MainRouter.new.call({:body => 'can you say hi to me?'})
     WTF? I don't know how to do that!
-     => true
-    :016 > MainRouter.call({:body => 'can you say hi to me?', :to => 'greeter'})
+     => true 
+    1.8.7 :016 > MainRouter.new.call({:body => 'can you say hi to me?', :to => 'greeter'})
     Hi there. You sent me: {:body=>"can you say hi to me?", :to=>"greeter"}
-     => true
+     => true 
+
 
 == TODO
 
@@ -54,6 +55,13 @@ Pass Regexp captures on to the proc when there is a match. Examples:
     end
     match :some_attr => /some (cool|awesome) thing/, :body => /(.*)/ do |message|
       puts "You thought that #{message[:message_router_matches][:body][1]} was #{message[:message_router_matches][:some_attr][1]}"
+    end
+    -- OR -- (probably best because it is simplest)
+    match /some (cool|awesome) thing(.*)/ do |message, word, the_rest|
+      puts "You thought the thing was #{word}. But the rest is #{the_rest}"
+    end
+    match :some_attr => /some (cool|awesome) thing(.*)/, :body => /(.*)/ do |message, hash|
+      puts "You thought that #{hash[:body]} was #{hash[:some_attr][0]}. But the rest is #{hash[:some_attr][1]}"
     end
 
 Improve specs to minimize use of global variables. The idea below about passing copies of the message around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the message, and the final return value would be the message, which I could examine.
