@@ -16,7 +16,7 @@ describe MessageRouter::Router do
           $thing_to_match = $did_it_run = nil
         end
 
-        let :message do
+        let :env do
           {
             :body => 'hello world',
             :from => '15554443333',
@@ -32,8 +32,8 @@ describe MessageRouter::Router do
 
             # Using these methods also proves that the message is optionally
             # passed to helper methods.
-            def always_true(message)
-              message[:body] == 'hello world'
+            def always_true(env)
+              env[:body] == 'hello world'
             end
             def always_false
               false
@@ -44,12 +44,12 @@ describe MessageRouter::Router do
         let :the_test do
           Proc.new do |opts|
             $thing_to_match = opts[:true]
-            router.call(message)
+            router.call(env)
             $did_it_run.should == true
             $did_it_run = nil # reset for next time
 
             $thing_to_match = opts[:false]
-            router.call(message)
+            router.call(env)
             $did_it_run.should == nil
             $did_it_run = nil # reset for next time
           end
@@ -64,10 +64,10 @@ describe MessageRouter::Router do
           the_test.call :true => true, :false => nil
         end
 
-        it 'accepts a proc which is passed the message' do
+        it 'accepts a proc which is passed the env' do
           the_test.call(
-            :true  => Proc.new {|msg| msg[:to] == '12345'},
-            :false => Proc.new {|msg| msg[:to] == '54321'}
+            :true  => Proc.new {|env| env[:to] == '12345'},
+            :false => Proc.new {|env| env[:to] == '54321'}
           )
         end
 
@@ -113,27 +113,27 @@ describe MessageRouter::Router do
 
       describe '2nd argument' do
         it 'accepts a Proc' do
-          message = {}
+          env = {}
           router = MessageRouter::Router.build do
-            match(true, Proc.new { |m| m[:did_it_run] = true })
+            match(true, Proc.new { |env| env[:did_it_run] = true })
           end
-          router.call message
-          message[:did_it_run].should be_true
+          router.call env
+          env[:did_it_run].should be_true
         end
 
         it 'accepts a block' do
-          message = {}
+          env = {}
           router = MessageRouter::Router.build do
-            match(true) { |m| m[:did_it_run] = true }
+            match(true) { |env| env[:did_it_run] = true }
           end
-          router.call message
-          message[:did_it_run].should be_true
+          router.call env
+          env[:did_it_run].should be_true
         end
 
         it 'raises an execption when both a Proc and a block are given' do
           lambda {
             router = MessageRouter::Router.build do
-              match(true, Proc.new { |m| m[:did_it_run] = true }) { |m| m[:did_it_run] = true }
+              match(true, Proc.new { |env| env[:did_it_run] = true }) { |env| env[:did_it_run] = true }
             end
           }.should raise_error(ArgumentError)
         end
@@ -180,9 +180,9 @@ describe MessageRouter::Router do
             match($inner_matcher) { $did_inner_run = true }
           end
 
-          match $outer_matcher do |message|
+          match $outer_matcher do |env|
             $did_outer_run = true
-            sub_router.call(message)
+            sub_router.call(env)
           end
         end
       end
@@ -233,14 +233,14 @@ describe MessageRouter::Router do
             end
 
             # 'mount' them
-            match $outer_matcher_1 do |message|
+            match $outer_matcher_1 do |env|
               $did_outer_run_1 = true
-              sub_router_1.call(message)
+              sub_router_1.call(env)
             end
 
-            match $outer_matcher_2 do |message|
+            match $outer_matcher_2 do |env|
               $did_outer_run_2 = true
-              sub_router_2.call(message)
+              sub_router_2.call(env)
             end
           end
         end
@@ -277,23 +277,23 @@ describe MessageRouter::Router do
           2 => 'Jim',
           3 => 'Jules'
         }
-        def lookup_human_name(message)
-          message[:human_name] = LOOKUP[message[:id]]
+        def lookup_human_name(env)
+          env[:human_name] = LOOKUP[env[:id]]
         end
       end
 
-      it 'can modify the message' do
+      it 'can modify the env' do
         router = MessageRouter::Router.build do
           extend MyTestHelper
-          match :lookup_human_name do |message|
-            $is_john = message[:human_name] == 'John'
+          match :lookup_human_name do |env|
+            $is_john = env[:human_name] == 'John'
           end
         end
 
-        message = {:id => 1}
-        router.call(message).should be_true
+        env = {:id => 1}
+        router.call(env).should be_true
         $is_john.should be_true               # Prove the inner matcher can see the new value
-        message[:human_name].should == 'John' # Prove we can get at the value after the router has finished.
+        env[:human_name].should == 'John' # Prove we can get at the value after the router has finished.
       end
     end
   end
