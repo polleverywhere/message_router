@@ -42,6 +42,23 @@ And now some irb action.
 
 Get docs working nicely (formatting, etc.) with RDoc.
 
+Add tests to ensure that instance variables can be shared between initializers and helpers. For example:
+    class MyRouter < MessageRouter::Router
+      def initilaize(config)
+        @sender = config[:sender]
+        super
+      end
+
+      match true do
+        send_something
+      end
+
+      def send_something
+        @sender.puts 'something'
+      end
+    end
+    MyRouter.new(:sender => STDOUT).call({})  # prints out 'something' to standard out.
+
 Pass Regexp captures on to the proc when there is a match. Examples:
     match /some (cool|awesome) thing/ do |message, match|
       puts "You thought the thing was #{match[1]}"
