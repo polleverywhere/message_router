@@ -83,9 +83,10 @@ Pass Regexp captures on to the proc when there is a match. Examples:
 
 Improve specs to minimize use of global variables. The idea below about passing copies of the message around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the message, and the final return value would be the message, which I could examine.
 
-Consider making the String matcher more flexible:
-* Allow case insensitive
-* Allow partial matches:
+Consider making the String matcher more flexible. There could be options for:
+* Exact match
+* Case sensitivity
+* Partial matches:
   * starts with
   * ends with
   * contains

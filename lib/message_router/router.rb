@@ -55,11 +55,11 @@ class MessageRouter
 
     # The 1st argument to a matcher can be:
     # * true, false, or nil
-    # * String or Regexp, which match against env[:body]. Strings require
-    #   an exact match.
+    # * String or Regexp, which match against env[:body]. Strings match against
+    #   the 1st word.
     # * Hash - Keys are expected to be a subset of the env's keys. The
     #   values are String or Regexp to be match again the corresponding value
-    #   in the env Hash. Again, Strings require an exact match.
+    #   in the env Hash. Again, Strings match against the 1st word.
     # * Symbol - Calls a helper method of the same name. If the helper can take
     #   an argument, the env will be passed to it. The return value of the
     #   helper method determines if the matcher matches.
@@ -166,7 +166,7 @@ class MessageRouter
           should_i.all? do |key, val|
             case val
             when String
-              env[key] == val
+              env[key] =~ /\A#{val}\b/i # Match 1st word
             when Regexp
               env[key] =~ val
             else

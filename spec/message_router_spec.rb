@@ -71,8 +71,8 @@ describe MessageRouter::Router do
           the_test.call :true => /hello/, :false => /bye bye/
         end
 
-        it 'accepts a string to match against the message body' do
-          the_test.call :true => 'hello world', :false => 'hello'
+        it 'accepts a string to match against the 1st word in the message body' do
+          the_test.call :true => 'hello', :false => 'hell'
         end
 
         it 'accepts a symbol which is a method name' do
