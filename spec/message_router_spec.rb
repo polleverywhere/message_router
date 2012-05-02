@@ -134,13 +134,39 @@ describe MessageRouter::Router do
           }.should raise_error(ArgumentError)
         end
 
-        it 'raises an execption when neithr a Proc nor a block are given' do
+        it 'raises an execption when neither a Proc nor a block are given' do
           lambda {
             router = Class.new MessageRouter::Router do
               match true
             end.new
           }.should raise_error(ArgumentError)
         end
+      end
+
+      it 'defaults the 1st argument to true if only a block is given' do
+        env = {}
+        router = Class.new MessageRouter::Router do
+          match { |env| env['did_it_run'] = true }
+        end.new
+        router.call env
+        env['did_it_run'].should be_true
+      end
+
+      it 'defaults the 1st argument to true if only a Proc is given' do
+        env = {}
+        router = Class.new MessageRouter::Router do
+          match(Proc.new { |env| env['did_it_run'] = true })
+        end.new
+        router.call env
+        env['did_it_run'].should be_true
+      end
+
+      it 'raises an execption when no arguments and no block is given' do
+        lambda {
+          router = Class.new MessageRouter::Router do
+            match
+          end.new
+        }.should raise_error(ArgumentError)
       end
     end
   end

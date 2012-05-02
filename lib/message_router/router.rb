@@ -75,14 +75,30 @@ class MessageRouter
     # allows us to mount sub-routers and continue trying other rules if those
     # subrouters fail to match something.
     # The 2nd argument to #match can also be specified with a block.
-    def self.match should_i, do_this=nil, &do_this_block
-      if do_this && do_this_block
-        raise ArgumentError, "You may not provide a block when a 2nd argument has been provided."
-      elsif do_this.nil? && do_this_block.nil?
-        raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
+    # If the 1st argument is skipped, then it is assumed to be true. This is
+    # useful for passing a message to a sub-router, which will return nil if
+    # it doesn't match. For example:
+    #     match MyOtherRouter.new
+    # is a short-hand for:
+    #     match true, MyOtherRouter.new
+    def self.match *args, &block
+      args << block if block
+      case args.size
+      when 0
+        raise ArgumentError, "You must provide either a block or an argument which responds to call."
+      when 1
+        if args[0].respond_to?(:call)
+          do_this  = args[0]
+          should_i = true
+        else
+          raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
+        end
+      when 2
+        should_i, do_this = args
+        raise ArgumentError, "The 2nd argument must respond to call." unless do_this.respond_to?(:call)
+      else
+        raise ArgumentError, "Too many arguments. Note: you may not provide a block when a 2nd argument has been provided."
       end
-
-      do_this ||= do_this_block
 
       # Save the arguments for later.
       rules << [should_i, do_this]
@@ -133,15 +149,7 @@ class MessageRouter
 
 
     private
-    def match should_i, do_this=nil, &do_this_block
-      if do_this && do_this_block
-        raise ArgumentError, "You may not provide a block when a 2nd argument has been provided."
-      elsif do_this.nil? && do_this_block.nil?
-        raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
-      end
-
-      do_this ||= do_this_block
-
+    def match should_i, do_this
       case should_i
       when Regexp, String
         # TODO: Consider making this default attribute configurable.
