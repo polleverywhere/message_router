@@ -14,9 +14,9 @@ describe MessageRouter::Router do
 
         let :env do
           {
-            :body => 'hello world',
-            :from => '15554443333',
-            :to   => '12345'
+            'body' => 'hello world',
+            'from' => '15554443333',
+            'to'   => '12345'
           }
         end
 
@@ -29,7 +29,7 @@ describe MessageRouter::Router do
             # Using these methods also proves that the message is optionally
             # passed to helper methods.
             def always_true(env)
-              env[:body] == 'hello world'
+              env['body'] == 'hello world'
             end
             def always_false
               false
@@ -62,8 +62,8 @@ describe MessageRouter::Router do
 
         it 'accepts a proc which is passed the env' do
           the_test.call(
-            :true  => Proc.new {|env| env[:to] == '12345'},
-            :false => Proc.new {|env| env[:to] == '54321'}
+            :true  => Proc.new {|env| env['to'] == '12345'},
+            :false => Proc.new {|env| env['to'] == '54321'}
           )
         end
 
@@ -83,24 +83,24 @@ describe MessageRouter::Router do
           it 'accepts a string to match against the hash key' do
             the_test.call(
               :true => {
-                :from => '15554443333',
-                :to   => '12345'
+                'from' => '15554443333',
+                'to'   => '12345'
               },
               :false => {
-                :from => 'something-else',
-                :to   => '12345'
+                'from' => 'something-else',
+                'to'   => '12345'
               }
             )
           end
           it 'accepts a regex to match against the hash key' do
             the_test.call(
               :true => {
-                :from => /\A1555\d{7}\Z/,
-                :to   => /\A\d{5}\Z/
+                'from' => /\A1555\d{7}\Z/,
+                'to'   => /\A\d{5}\Z/
               },
               :false => {
-                :from => /\A1555\d{7}\Z/,
-                :to   => /i don't match/
+                'from' => /\A1555\d{7}\Z/,
+                'to'   => /i don't match/
               }
             )
           end
@@ -111,25 +111,25 @@ describe MessageRouter::Router do
         it 'accepts a Proc' do
           env = {}
           router = Class.new MessageRouter::Router do
-            match(true, Proc.new { |env| env[:did_it_run] = true })
+            match(true, Proc.new { |env| env['did_it_run'] = true })
           end.new
           router.call env
-          env[:did_it_run].should be_true
+          env['did_it_run'].should be_true
         end
 
         it 'accepts a block' do
           env = {}
           router = Class.new MessageRouter::Router do
-            match(true) { |env| env[:did_it_run] = true }
+            match(true) { |env| env['did_it_run'] = true }
           end.new
           router.call env
-          env[:did_it_run].should be_true
+          env['did_it_run'].should be_true
         end
 
         it 'raises an execption when both a Proc and a block are given' do
           lambda {
             router = Class.new MessageRouter::Router do
-              match(true, Proc.new { |env| env[:did_it_run] = true }) { |env| env[:did_it_run] = true }
+              match(true, Proc.new { |env| env['did_it_run'] = true }) { |env| env['did_it_run'] = true }
             end.new
           }.should raise_error(ArgumentError)
         end
@@ -274,7 +274,7 @@ describe MessageRouter::Router do
           3 => 'Jules'
         }
         def lookup_human_name(env)
-          env[:human_name] = LOOKUP[env[:id]]
+          env['human_name'] = LOOKUP[env['id']]
         end
       end
 
@@ -282,14 +282,14 @@ describe MessageRouter::Router do
         router = Class.new MessageRouter::Router do
           include MyTestHelper
           match :lookup_human_name do |env|
-            $is_john = env[:human_name] == 'John'
+            $is_john = env['human_name'] == 'John'
           end
         end.new
 
-        env = {:id => 1}
+        env = {'id' => 1}
         router.call(env).should be_true
-        $is_john.should be_true           # Prove the inner matcher can see the new value
-        env[:human_name].should == 'John' # Prove we can get at the value after the router has finished.
+        $is_john.should be_true            # Prove the inner matcher can see the new value
+        env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
       end
     end
   end

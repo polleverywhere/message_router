@@ -6,7 +6,7 @@ class MessageRouter
   #       # Share helpers between routers by including modules
   #       include MyApp::Router::MyHelper
   #
-  #       match(lamba { |env| env[:from].nil? }) do |env|
+  #       match(lamba { |env| env['from'].nil? }) do |env|
   #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
   #       end
   #
@@ -16,19 +16,19 @@ class MessageRouter
   #       end
   #
   #       match /\Ahelp/i do |env|
-  #         SupportQueue.contact_asap(env[:from])
+  #         SupportQueue.contact_asap(env['from'])
   #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
   #       end
   #
   #       # StopRouter would have been defined just like this router.
   #       match /\Astop/i, MyApp::Router::StopRouter
   #
-  #       match :to => /(12345|54321)/ do |env|
+  #       match 'to' => /(12345|54321)/ do |env|
   #         Logger.warn "Use of deprecated short code: #{msg.inspect}"
   #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
   #       end
   #
-  #       match :user_name do |env|
+  #       match 'user_name' do |env|
   #         send_reply "I found you! Your name is #{user_name}.", env
   #       end
   #
@@ -38,24 +38,24 @@ class MessageRouter
   #       end
   #
   #
-  #       def send_reply(body, orig_msg)
-  #         OutgoingMessage.deliver!(:body => body, :to => orig_msg[:from], :from => orig_msg[:to])
+  #       def send_reply(body, env)
+  #         OutgoingMessage.deliver!(:body => body, :to => env['from'], :from => env['to'])
   #       end
   #
   #       def user_name(env)
-  #         env[:user_name] ||= User.find(env[:from])
+  #         env['user_name'] ||= User.find(env['from'])
   #       end
   #     end
   #
   #     router = MyApp::Router::Application.new
   #     router.call({})  # Logs an error about not knowing who the message is from
-  #     router.call({:from => 'mr-smith', :body => 'ping'})  # Sends a 'pong' reply
-  #     router.call({:from => 'mr-smith', :to => 12345})     # Sends a deprecation warning reply
+  #     router.call({'from' => 'mr-smith', 'body' => 'ping'})  # Sends a 'pong' reply
+  #     router.call({'from' => 'mr-smith', 'to' => 12345})     # Sends a deprecation warning reply
   class Router
 
     # The 1st argument to a matcher can be:
     # * true, false, or nil
-    # * String or Regexp, which match against env[:body]. Strings match against
+    # * String or Regexp, which match against env['body']. Strings match against
     #   the 1st word.
     # * Hash - Keys are expected to be a subset of the env's keys. The
     #   values are String or Regexp to be match again the corresponding value
@@ -110,7 +110,7 @@ class MessageRouter
 
     # Kicks off the router. 'env' is a Hash. The keys are up to the user;
     # however, the default key (used when a matcher is just a String or Regexp)
-    # is :body. If you don't specify this key, then String and Regexp matchers
+    # is 'body'. If you don't specify this key, then String and Regexp matchers
     # will always be false.
     # Returns nil if no rules match
     # Returns true if a rule matches
@@ -145,7 +145,7 @@ class MessageRouter
       case should_i
       when Regexp, String
         # TODO: Consider making this default attribute configurable.
-        match({:body => should_i}, do_this)
+        match({'body' => should_i}, do_this)
 
       when TrueClass, FalseClass, NilClass
         match(Proc.new { should_i }, do_this)
