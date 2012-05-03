@@ -88,7 +88,7 @@ Pass Regexp captures on to the proc when there is a match. Examples:
       puts "You thought that #{hash['body']} was #{hash['some_attr'][0]}. But the rest is #{hash['some_attr'][1]}"
     end
 
-Improve specs to minimize use of global variables. The idea below about passing copies of the message around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the message, and the final return value would be the message, which I could examine.
+Improve specs to minimize use of global variables. The idea below about passing copies of the env hash around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the env hash, and the final return value would be the env hash, which I could examine.
 
 Consider making the String matcher more flexible. There could be options for:
 * Exact match
@@ -103,21 +103,21 @@ Recursion detection: It could be done by having a specific key in the message ha
 
 Make helper methods defined (or included) in parent routers available in sub routers. It could be done with delegation, but that might get messy. It may be easier to not implement this and just require the user to use sub-classing to get the desired behavior.
 
-Pass around copies of the message Hash instead of modifying the existing Hash in place.
+Pass around copies of the env Hash instead of modifying the existing Hash in place.
 * This _might_ help with multi-threading
-  * Perhaps a parent router wants to delegate to 2 sub-routers which are independent of each other. The current implementation has a shared message object, so I couldn't use multi-threading, (though forking could work). I would have to trust the user to call #dup on at least one of the messages. With this new way, it is safe by default.
-* Convention would be for the 'should_i' Procs to return a copy of the message, either modified or not, depending on their needs.
+  * Perhaps a parent router wants to delegate to 2 sub-routers which are independent of each other. The current implementation has a shared env hash, so I couldn't use multi-threading, (though forking could work). I would have to trust the user to call #dup on at least one of the env hashes. With this new way, it is safe by default.
+* Convention would be for the 'should_i' Procs to return a copy of the env hashes, either modified or not, depending on their needs.
   * They would still return nil or false if they don't match.
-* We could also require (by convention only) that sub-routers also return a copy of the message (if they succeed) so this (optionally modified) message can be used for further routing.
-  * This would give the original router access to both the modified message and the original message.
+* We could also require (by convention only) that sub-routers also return a copy of the env hash (if they succeed) so this (optionally modified) env hash can be used for further routing.
+  * This would give the original router access to both the modified env hash and the original env hash.
 
-It might be nice to have the message available as an instance variable/method. Currently the message can only be passed as an argument to the proc because there is just 1 instance of the router which is used over and over again. If the router was a class and we instantiated a new instance of that class for each message, then this feature would probably be easy.
-
-Add #env helper which is the environment (aka the message). It should be accessible from any user-defined helpers.
+Add #env helper which is the environment (aka the message). It should be accessible from any user-defined helpers. Currently the env hash can only be passed as an argument. This is tricky because there is just 1 instance of the router which is used over and over again. We could create a temporary variable to store the env hash, but that could mess with multi-threading and recursion.
 
 If the 2nd argument to #match is an anonymous function (lambda, proc, or block), then execute it in the context/scope of the matcher so it has access to all helpers (user-defined and those provided by MessageRouter) and don't pass the env Hash as an argument (since it is available as a helper). If the 2nd argument to #match is simply an object that responds to call, then just call #call(env) and don't mess with context/scope (as we do now).
 * After doing this, we no longer need to pass the env Hash to helper methods.
 * IMPORTANT: If we do this, users need to be careful about instance variables. Instance variables are owned by the router, not the message, so they are essentially global variables. Users should never use instance variables in helpers. Instead any extra state should be stored in the env Hash because MessageRouter will clear that away between messages.
+
+Find a way to allow user-defined 'do_this' procs/blocks to not have to return a true value to be considered to have matched. We still need a way to know if a sub-router matched or not. This _may_require that the code treat sub-routers and user-defined 'do_this' procs/blocks differently, which could get awkward.
 
 == License
 
