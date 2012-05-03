@@ -28,8 +28,23 @@ class MessageRouter
   #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
   #       end
   #
-  #       match 'user_name' do |env|
+  #       match :user_name do |env|
   #         send_reply "I found you! Your name is #{user_name}.", env
+  #       end
+  #
+  #       match %w(stop end quit), StopRouter.new
+  #
+  #       # Array elements don't need to be the same type
+  #       match [
+  #         :user_is_a_tester,
+  #         {'to' => %w(12345 54321)},
+  #         {'RAILS_ENV' => 'test'},
+  #         'test'
+  #       ], TestRouter.new
+  #
+  #       # Works inside a Hash too
+  #       match 'from' => ['12345', '54321', /111\d\d/] do |env|
+  #         puts "'#{env['from']}' is a funny looking short code"
   #       end
   #
   #       match true do |env|
@@ -57,9 +72,11 @@ class MessageRouter
     # * true, false, or nil
     # * String or Regexp, which match against env['body']. Strings match against
     #   the 1st word.
+    # * Array - Elements can be Strings or Regexps. They are matched against
+    #   'body'. Matches if any element is matches.
     # * Hash - Keys are expected to be a subset of the env's keys. The
-    #   values are String or Regexp to be match again the corresponding value
-    #   in the env Hash. Again, Strings match against the 1st word.
+    #   values are String, Regexp, or Array to be match again the corresponding
+    #   value in the env Hash. True if there is a match for all keys.
     # * Symbol - Calls a helper method of the same name. If the helper can take
     #   an argument, the env will be passed to it. The return value of the
     #   helper method determines if the matcher matches.
@@ -149,17 +166,23 @@ class MessageRouter
 
 
     private
-    def match should_i, do_this
+    def match(should_i, do_this)
+      @rules << [normalize_match_params(should_i), do_this]
+    end
+
+    def normalize_match_params(should_i=nil, &block)
+      should_i ||= block if block
+
       case should_i
       when Regexp, String
         # TODO: Consider making this default attribute configurable.
-        match({'body' => should_i}, do_this)
+        normalize_match_params 'body' => should_i
 
       when TrueClass, FalseClass, NilClass
-        match(Proc.new { should_i }, do_this)
+        Proc.new { should_i }
 
       when Symbol
-        match(Proc.new do |env|
+        Proc.new do |env|
           if self.method(should_i).arity == 0
             # Method won't accept arguments
             self.send should_i
@@ -167,25 +190,40 @@ class MessageRouter
             # Method will accept arguments. Try sending the env.
             self.send should_i, env
           end
-        end, do_this)
+        end
+
+      when Array
+        should_i = should_i.map {|x| normalize_match_params x}
+        Proc.new do |env|
+          should_i.any? { |x| x.call env }
+        end
 
       when Hash
-        match(Proc.new do |env|
+        Proc.new do |env|
           should_i.all? do |key, val|
-            case val
-            when String
-              env[key] =~ /\A#{val}\b/i # Match 1st word
-            when Regexp
-              env[key] =~ val
-            else
-              raise "Unexpected value '#{val.inspect}'. Should be String or Regexp."
-            end
+            attr_matches? env[key], val
           end
-        end, do_this)
+        end
 
       else
         # Assume it already responds to #call.
-        @rules << [should_i, do_this]
+        should_i
+      end
+
+    end
+
+    def attr_matches?(attr, val)
+      case val
+      when String
+        attr =~ /\A#{val}\b/i # Match 1st word
+      when Regexp
+        attr =~ val
+      when Array
+        val.any? do |x|
+          attr_matches? attr, x
+        end
+      else
+        raise "Unexpected value '#{val.inspect}'. Should be String, Regexp, or Array of Strings and Regexps."
       end
     end
   end

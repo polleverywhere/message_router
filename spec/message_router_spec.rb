@@ -79,6 +79,38 @@ describe MessageRouter::Router do
           the_test.call :true => :always_true, :false => :always_false
         end
 
+        it 'accepts an Array' do
+          the_test.call :true => %w(only one of these needs to be the word hello), :false => %w(none of these match)
+        end
+
+        describe 'matching an Array' do
+          it "doesn't run the 'do_this' block multiple times if there are multiple matches" do
+            $run_count = 0
+            router = Class.new(MessageRouter::Router) do
+              match [true, true] do |env|
+                $run_count += 1
+                nil # Return nil to ensure this matcher failed.
+              end
+            end.new
+
+            router.call({})
+            $run_count.should == 1
+          end
+
+          it "returns nil if the 'do_this' block returns nil" do
+            $run_count = 0
+            router = Class.new(MessageRouter::Router) do
+              match [true, true] do |env|
+                $run_count += 1
+                nil # Return nil to ensure this matcher failed.
+              end
+            end.new
+
+            router.call({}).should == nil
+          end
+
+        end
+
         describe 'matching a hash' do
           it 'accepts a string to match against the hash key' do
             the_test.call(
@@ -101,6 +133,18 @@ describe MessageRouter::Router do
               :false => {
                 'from' => /\A1555\d{7}\Z/,
                 'to'   => /i don't match/
+              }
+            )
+          end
+          it 'accepts an Array to match against the hash key' do
+            the_test.call(
+              :true => {
+                'from' => [/i don't match/, 'neither do i', 'but this last one does', /\A1555\d{7}\Z/],
+                'to'   => [/i don't match/, 'neither do i', 'but this last one does', /\A\d{5}\Z/]
+              },
+              :false => {
+                'from' => [/\A1555\d{7}\Z/, 'that last one did not match'],
+                'to'   => [/i don't match/, 'neither do i']
               }
             )
           end

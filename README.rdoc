@@ -113,22 +113,6 @@ Pass around copies of the message Hash instead of modifying the existing Hash in
 
 It might be nice to have the message available as an instance variable/method. Currently the message can only be passed as an argument to the proc because there is just 1 instance of the router which is used over and over again. If the router was a class and we instantiated a new instance of that class for each message, then this feature would probably be easy.
 
-Allow #match to accept an array for the 1st argument. It matches if ANY of the items in the array matches. Each item in the array matches the same as everything else does. Examples:
-    match %w(stop end quit), StopRouter.new
-
-    # Array elements don't need to be the same type
-    match [
-      :user_is_a_tester,
-      {'to' => %w(12345 54321)},
-      {'RAILS_ENV' => 'test'},
-      'test'
-    ], TestRouter.new
-
-    # Works inside a Hash too
-    match 'from' => ['12345', '54321', /111\d\d/] do |env|
-      puts "'#{env['from']}' is a funny looking short code"
-    end
-
 Add #env helper which is the environment (aka the message). It should be accessible from any user-defined helpers.
 
 If the 2nd argument to #match is an anonymous function (lambda, proc, or block), then execute it in the context/scope of the matcher so it has access to all helpers (user-defined and those provided by MessageRouter) and don't pass the env Hash as an argument (since it is available as a helper). If the 2nd argument to #match is simply an object that responds to call, then just call #call(env) and don't mess with context/scope (as we do now).
