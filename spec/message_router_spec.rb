@@ -28,7 +28,7 @@ describe MessageRouter::Router do
 
             # Using these methods also proves that the message is optionally
             # passed to helper methods.
-            def always_true(env)
+            def always_true
               env['body'] == 'hello world'
             end
             def always_false
@@ -343,23 +343,30 @@ describe MessageRouter::Router do
           2 => 'Jim',
           3 => 'Jules'
         }
-        def lookup_human_name(env)
+        def lookup_human_name
           env['human_name'] = LOOKUP[env['id']]
         end
       end
 
-      it 'can modify the env' do
-        router = Class.new MessageRouter::Router do
+      let :router do
+        Class.new MessageRouter::Router do
           include MyTestHelper
           match :lookup_human_name do |env|
             $is_john = env['human_name'] == 'John'
           end
         end.new
+      end
 
+      it 'can access/modify the env via #env' do
         env = {'id' => 1}
         router.call(env).should be_true
         $is_john.should be_true            # Prove the inner matcher can see the new value
         env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
+      end
+
+      it '#env is reset after #call has finished' do
+        router.call({'id' => 1}).should be_true
+        router.send(:env).should be_nil
       end
     end
   end

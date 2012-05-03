@@ -157,15 +157,24 @@ class MessageRouter
     # argument to #match. If you return nil or false, the router will keep
     # looking for another match.
     def call(env)
+      # I'm pretty sure this is NOT thread safe. Having two threads use the
+      # same router at the same time will almost certainly give you VERY weird
+      # and incorrect results. We may want to introduce a RouterRun object to
+      # encapsulate one invocation of this #call method.
+      @env = env
       @rules.detect do |should_i, do_this|
-        if should_i.call(env)
-          return true if do_this.call env
+        if should_i.call(@env)
+          return true if do_this.call @env
         end
       end
+    ensure
+      @env = nil
     end
 
 
     private
+    def env; @env; end
+
     def match(should_i, do_this)
       @rules << [normalize_match_params(should_i), do_this]
     end
@@ -183,13 +192,7 @@ class MessageRouter
 
       when Symbol
         Proc.new do |env|
-          if self.method(should_i).arity == 0
-            # Method won't accept arguments
-            self.send should_i
-          else
-            # Method will accept arguments. Try sending the env.
-            self.send should_i, env
-          end
+          self.send should_i
         end
 
       when Array
