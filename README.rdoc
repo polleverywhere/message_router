@@ -19,22 +19,22 @@ And now some irb action.
     1.8.7 :005?>       end
     1.8.7 :006?>   end
      => [[/hi/, #<Proc:0x00000000026963b8@(irb):2>]] 
-    1.8.7 :007 > HelloRouter.new.call({:body => 'can you say hi to me?'})
-    Hi there. You sent me: {:body=>"can you say hi to me?"}
+    1.8.7 :007 > HelloRouter.new.call({'body' => 'can you say hi to me?'})
+    Hi there. You sent me: {'body'=>"can you say hi to me?"}
      => true 
     1.8.7 :008 > class MainRouter < MessageRouter::Router
-    1.8.7 :009?>     match({:to => 'greeter'}, HelloRouter.new)
+    1.8.7 :009?>     match({'to' => 'greeter'}, HelloRouter.new)
     1.8.7 :010?>     match(true) do
     1.8.7 :011 >           puts "WTF? I don't know how to do that!"
     1.8.7 :012?>         true # puts returns nil, and that would fail the matcher
     1.8.7 :013?>       end
     1.8.7 :014?>   end
      => [[{:to=>"greeter"}, #<HelloRouter:0x25fef90 @rules=[[#<Proc:0x000000000266b2d0@/home/paul/sc/pe/message_router/lib/message_router/router.rb:165>, #<Proc:0x00000000026963b8@(irb):2>]]>], [true, #<Proc:0x00000000025ff580@(irb):10>]] 
-    1.8.7 :015 > MainRouter.new.call({:body => 'can you say hi to me?'})
+    1.8.7 :015 > MainRouter.new.call({'body' => 'can you say hi to me?'})
     WTF? I don't know how to do that!
      => true 
-    1.8.7 :016 > MainRouter.new.call({:body => 'can you say hi to me?', :to => 'greeter'})
-    Hi there. You sent me: {:body=>"can you say hi to me?", :to=>"greeter"}
+    1.8.7 :016 > MainRouter.new.call({'body' => 'can you say hi to me?', 'to' => 'greeter'})
+    Hi there. You sent me: {'body'=>"can you say hi to me?", 'to'=>"greeter"}
      => true 
 
 
@@ -60,25 +60,32 @@ Add tests to ensure that instance variables can be shared between initializers a
     MyRouter.new(:sender => STDOUT).call({})  # prints out 'something' to standard out.
 
 Pass Regexp captures on to the proc when there is a match. Examples:
-    match /some (cool|awesome) thing/ do |message, match|
+    match /some (cool|awesome) thing/ do |env, match|
       puts "You thought the thing was #{match[1]}"
     end
-    match :some_attr => /some (cool|awesome) thing/, :body => /(.*)/ do |message, matches|
-      puts "You thought that #{matches[:body][1]} was #{matches[:some_attr][1]}"
+    match 'some_attr' => /some (cool|awesome) thing/, 'body' => /(.*)/ do |env, matches|
+      puts "You thought that #{matches['body'][1]} was #{matches['some_attr'][1]}"
     end
     -- OR --
-    match /some (cool|awesome) thing/ do |message|
-      puts "You thought the thing was #{message[:message_router_match][1]}"
+    match /some (cool|awesome) thing/ do |env|
+      puts "You thought the thing was #{env['message_router_match'][1]}"
     end
-    match :some_attr => /some (cool|awesome) thing/, :body => /(.*)/ do |message|
-      puts "You thought that #{message[:message_router_matches][:body][1]} was #{message[:message_router_matches][:some_attr][1]}"
+    match 'some_attr' => /some (cool|awesome) thing/, 'body' => /(.*)/ do |env|
+      puts "You thought that #{env['message_router_matches']['body'][1]} was #{env['message_router_matches']['some_attr'][1]}"
     end
     -- OR -- (probably best because it is simplest)
-    match /some (cool|awesome) thing(.*)/ do |message, word, the_rest|
+    match /some (cool|awesome) thing(.*)/ do |env, word, the_rest|
       puts "You thought the thing was #{word}. But the rest is #{the_rest}"
     end
-    match :some_attr => /some (cool|awesome) thing(.*)/, :body => /(.*)/ do |message, hash|
-      puts "You thought that #{hash[:body]} was #{hash[:some_attr][0]}. But the rest is #{hash[:some_attr][1]}"
+    match 'some_attr' => /some (cool|awesome) thing(.*)/, 'body' => /(.*)/ do |env, hash|
+      puts "You thought that #{hash['body']} was #{hash['some_attr'][0]}. But the rest is #{hash['some_attr'][1]}"
+    end
+    -- OR -- (if the note below about setting context/scope of annonymous functions is done)
+    match /some (cool|awesome) thing(.*)/ do |word, the_rest|
+      puts "You thought the thing was #{word}. But the rest is #{the_rest}"
+    end
+    match 'some_attr' => /some (cool|awesome) thing(.*)/, 'body' => /(.*)/ do |hash|
+      puts "You thought that #{hash['body']} was #{hash['some_attr'][0]}. But the rest is #{hash['some_attr'][1]}"
     end
 
 Improve specs to minimize use of global variables. The idea below about passing copies of the message around (instead of modifying it in place) might help here. I could have various bits of code being tested modify the message, and the final return value would be the message, which I could examine.
@@ -91,7 +98,7 @@ Consider making the String matcher more flexible. There could be options for:
   * ends with
   * contains
 
-Recursion detection: It could be done by having a specific key in the message hash for parents. Before sending #call to a matcher's proc we could run something like "message[:message_router_stack] << self". Then we could check the size of this. The maximum number of levels would need to be configurable to allow some recursion.
+Recursion detection: It could be done by having a specific key in the message hash for parents. Before sending #call to a matcher's proc we could run something like "message['message_router_stack'] << self". Then we could check the size of this. The maximum number of levels would need to be configurable to allow some recursion.
 * We could just rely on a stack overflow, but having recursion detection would make debugging easier.
 
 Make helper methods defined (or included) in parent routers available in sub routers. It could be done with delegation, but that might get messy. It may be easier to not implement this and just require the user to use sub-classing to get the desired behavior.
@@ -122,6 +129,11 @@ Allow #match to accept an array for the 1st argument. It matches if ANY of the i
       puts "'#{env['from']}' is a funny looking short code"
     end
 
+Add #env helper which is the environment (aka the message). It should be accessible from any user-defined helpers.
+
+If the 2nd argument to #match is an anonymous function (lambda, proc, or block), then execute it in the context/scope of the matcher so it has access to all helpers (user-defined and those provided by MessageRouter) and don't pass the env Hash as an argument (since it is available as a helper). If the 2nd argument to #match is simply an object that responds to call, then just call #call(env) and don't mess with context/scope (as we do now).
+* After doing this, we no longer need to pass the env Hash to helper methods.
+* IMPORTANT: If we do this, users need to be careful about instance variables. Instance variables are owned by the router, not the message, so they are essentially global variables. Users should never use instance variables in helpers. Instead any extra state should be stored in the env Hash because MessageRouter will clear that away between messages.
 
 == License
 
