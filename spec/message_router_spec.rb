@@ -62,8 +62,8 @@ describe MessageRouter::Router do
 
         it 'accepts a proc which is passed the env' do
           the_test.call(
-            :true  => Proc.new {|env| env['to'] == '12345'},
-            :false => Proc.new {|env| env['to'] == '54321'}
+            :true  => Proc.new { env['to'] == '12345'},
+            :false => Proc.new { env['to'] == '54321'}
           )
         end
 
@@ -87,7 +87,7 @@ describe MessageRouter::Router do
           it "doesn't run the 'do_this' block multiple times if there are multiple matches" do
             $run_count = 0
             router = Class.new(MessageRouter::Router) do
-              match [true, true] do |env|
+              match [true, true] do
                 $run_count += 1
                 nil # Return nil to ensure this matcher failed.
               end
@@ -100,7 +100,7 @@ describe MessageRouter::Router do
           it "returns nil if the 'do_this' block returns nil" do
             $run_count = 0
             router = Class.new(MessageRouter::Router) do
-              match [true, true] do |env|
+              match [true, true] do
                 $run_count += 1
                 nil # Return nil to ensure this matcher failed.
               end
@@ -155,7 +155,7 @@ describe MessageRouter::Router do
         it 'accepts a Proc' do
           env = {}
           router = Class.new MessageRouter::Router do
-            match(true, Proc.new { |env| env['did_it_run'] = true })
+            match(true, Proc.new { env['did_it_run'] = true })
           end.new
           router.call env
           env['did_it_run'].should be_true
@@ -164,7 +164,7 @@ describe MessageRouter::Router do
         it 'accepts a block' do
           env = {}
           router = Class.new MessageRouter::Router do
-            match(true) { |env| env['did_it_run'] = true }
+            match(true) { env['did_it_run'] = true }
           end.new
           router.call env
           env['did_it_run'].should be_true
@@ -173,7 +173,7 @@ describe MessageRouter::Router do
         it 'raises an execption when both a Proc and a block are given' do
           lambda {
             router = Class.new MessageRouter::Router do
-              match(true, Proc.new { |env| env['did_it_run'] = true }) { |env| env['did_it_run'] = true }
+              match(true, Proc.new { env['did_it_run'] = true }) { env['did_it_run'] = true }
             end.new
           }.should raise_error(ArgumentError)
         end
@@ -190,7 +190,7 @@ describe MessageRouter::Router do
       it 'defaults the 1st argument to true if only a block is given' do
         env = {}
         router = Class.new MessageRouter::Router do
-          match { |env| env['did_it_run'] = true }
+          match { env['did_it_run'] = true }
         end.new
         router.call env
         env['did_it_run'].should be_true
@@ -199,7 +199,7 @@ describe MessageRouter::Router do
       it 'defaults the 1st argument to true if only a Proc is given' do
         env = {}
         router = Class.new MessageRouter::Router do
-          match(Proc.new { |env| env['did_it_run'] = true })
+          match(Proc.new { env['did_it_run'] = true })
         end.new
         router.call env
         env['did_it_run'].should be_true
@@ -246,7 +246,7 @@ describe MessageRouter::Router do
             match($inner_matcher) { $did_inner_run = true }
           end.new
 
-          match $outer_matcher do |env|
+          match $outer_matcher do
             $did_outer_run = true
             sub_router.call(env)
           end
@@ -299,12 +299,12 @@ describe MessageRouter::Router do
             end.new
 
             # 'mount' them
-            match $outer_matcher_1 do |env|
+            match $outer_matcher_1 do
               $did_outer_run_1 = true
               sub_router_1.call(env)
             end
 
-            match $outer_matcher_2 do |env|
+            match $outer_matcher_2 do
               $did_outer_run_2 = true
               sub_router_2.call(env)
             end
@@ -351,9 +351,29 @@ describe MessageRouter::Router do
       let :router do
         Class.new MessageRouter::Router do
           include MyTestHelper
-          match :lookup_human_name do |env|
+          match :lookup_human_name do
             $is_john = env['human_name'] == 'John'
           end
+
+          match 'run_a' => 'block' do
+            env['id'] = 2
+            env['the_name'] = lookup_human_name
+          end
+          match({'run_a' => 'proc'}, Proc.new do
+            env['id'] = 2
+            env['the_name'] = lookup_human_name
+          end)
+          match({'run_a' => 'lambda'}, lambda do
+            env['id'] = 2
+            env['the_name'] = lookup_human_name
+          end)
+
+          match(
+            Proc.new do
+              env['id'] = 3 if %w(proc lambda).include?(env['match_with'])
+              lookup_human_name
+            end
+           ) { true }
         end.new
       end
 
@@ -367,6 +387,22 @@ describe MessageRouter::Router do
       it '#env is reset after #call has finished' do
         router.call({'id' => 1}).should be_true
         router.send(:env).should be_nil
+      end
+
+      %w(block proc lambda).each do |type|
+        it "can be accessed from a #{type} that is the 2nd argument" do
+          env = {'run_a' => type}
+          router.call(env).should be_true
+          env['the_name'].should == 'Jim'
+        end
+      end
+
+      %w(proc lambda).each do |type|
+        it "can be accessed from a #{type} that is the 1st argument" do
+          env = {'match_with' => type}
+          router.call(env).should be_true
+          env['human_name'].should == 'Jules'
+        end
       end
     end
   end

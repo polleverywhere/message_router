@@ -6,16 +6,16 @@ class MessageRouter
   #       # Share helpers between routers by including modules
   #       include MyApp::Router::MyHelper
   #
-  #       match(lamba { |env| env['from'].nil? }) do |env|
+  #       match(lamba { env['from'].nil? }) do
   #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
   #       end
   #
-  #       match 'ping' do |env|
+  #       match 'ping' do
   #         PingCounter.increment!
   #         send_reply 'pong', env
   #       end
   #
-  #       match /\Ahelp/i do |env|
+  #       match /\Ahelp/i do
   #         SupportQueue.contact_asap(env['from'])
   #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
   #       end
@@ -23,12 +23,12 @@ class MessageRouter
   #       # StopRouter would have been defined just like this router.
   #       match /\Astop/i, MyApp::Router::StopRouter
   #
-  #       match 'to' => /(12345|54321)/ do |env|
+  #       match 'to' => /(12345|54321)/ do
   #         Logger.warn "Use of deprecated short code: #{msg.inspect}"
   #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
   #       end
   #
-  #       match :user_name do |env|
+  #       match :user_name do
   #         send_reply "I found you! Your name is #{user_name}.", env
   #       end
   #
@@ -43,11 +43,11 @@ class MessageRouter
   #       ], TestRouter.new
   #
   #       # Works inside a Hash too
-  #       match 'from' => ['12345', '54321', /111\d\d/] do |env|
+  #       match 'from' => ['12345', '54321', /111\d\d/] do
   #         puts "'#{env['from']}' is a funny looking short code"
   #       end
   #
-  #       match true do |env|
+  #       match true do
   #         UserMessage.create! env
   #         send_reply "Sorry we couldn't figure out how to handle your message. We have recorded it and someone will get back to you soon.", env
   #       end
@@ -98,6 +98,32 @@ class MessageRouter
     #     match MyOtherRouter.new
     # is a short-hand for:
     #     match true, MyOtherRouter.new
+    # It is important to keep in mind that blocks, procs, and lambdas, whether
+    # they are the 1st or 2nd argument, will be run in the scope of the router,
+    # just like the methods referenced by Symbols. That means that they have
+    # access to all the helper methods. However, it also means they have the
+    # ability to edit/add instance variables on the router; NEVER DO THIS. If
+    # you want to use an instance variable inside a helper, block, proc, or
+    # lambda, you MUST use the env hash instance. Examples:
+    #     # BAD
+    #     match :my_helper do
+    #       @cached_user ||= User.find_by_id(@user_id)
+    #     end
+    #     def find_user
+    #       @id ||= User.get_id_from_guid(env['guid'])
+    #     end
+    #
+    #     # GOOD
+    #     match :my_helper do
+    #       env['cached_user'] ||= User.find_by_id(env['user_id'])
+    #     end
+    #     def find_user
+    #       env['id'] ||= User.get_id_from_guid(env['guid'])
+    #     end
+    # If you do not follow this requirement, then when subsequent keywords are
+    # routed, they will see the instance variables from the previous message.
+    # In the case of the above example, every subsequent message will have
+    # @cached_user set the the user for the 1st message.
     def self.match *args, &block
       args << block if block
       case args.size
@@ -163,8 +189,20 @@ class MessageRouter
       # encapsulate one invocation of this #call method.
       @env = env
       @rules.detect do |should_i, do_this|
-        if should_i.call(@env)
-          return true if do_this.call @env
+        should_i = if should_i.kind_of?(Proc)
+          self.instance_eval &should_i
+        else
+          should_i.call @env
+        end
+
+        if should_i
+          do_this = if do_this.kind_of?(Proc)
+            self.instance_eval &do_this
+          else
+            do_this.call @env
+          end
+
+          return true if do_this
         end
       end
     ensure
@@ -191,18 +229,18 @@ class MessageRouter
         Proc.new { should_i }
 
       when Symbol
-        Proc.new do |env|
+        Proc.new do
           self.send should_i
         end
 
       when Array
         should_i = should_i.map {|x| normalize_match_params x}
-        Proc.new do |env|
+        Proc.new do
           should_i.any? { |x| x.call env }
         end
 
       when Hash
-        Proc.new do |env|
+        Proc.new do
           should_i.all? do |key, val|
             attr_matches? env[key], val
           end
