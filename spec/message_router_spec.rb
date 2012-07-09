@@ -235,17 +235,55 @@ describe MessageRouter::Router do
     context 'a rule matches' do
       subject do
         Class.new MessageRouter::Router do
-          match(true) { $did_it_run = true }
+          match(true) { env[:did_it_run] = true }
         end.new
       end
 
-      it "returns true when a rule matches" do
+      it "returns true" do
         subject.call({}).should be_true
       end
 
       it "calls the matcher's code" do
-        subject.call({})
-        $did_it_run.should be_true
+        subject.call(env = {})
+        env[:did_it_run].should be_true
+      end
+    end
+
+    context 'there is a prerequisite which is true' do
+      subject do
+        Class.new MessageRouter::Router do
+          prerequisite :true_method
+          match(true) { env[:did_it_run] = true }
+          def true_method; true; end
+        end.new
+      end
+
+      it "returns true" do
+        subject.call({}).should be_true
+      end
+
+      it "calls the matcher's code" do
+        subject.call(env = {})
+        env[:did_it_run].should be_true
+      end
+    end
+
+    context 'there is a prerequisite which is false' do
+      subject do
+        Class.new MessageRouter::Router do
+          prerequisite :false_method
+          match(true) { env[:did_it_run] = true }
+          def false_method; false; end
+        end.new
+      end
+
+      it "returns false" do
+        subject.call({}).should be_false
+      end
+
+      it "doesn't calls the matcher's code" do
+        subject.call(env = {})
+        env[:did_it_run].should_not be_true
       end
     end
 

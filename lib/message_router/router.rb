@@ -6,6 +6,8 @@ class MessageRouter
   #       # Share helpers between routers by including modules
   #       include MyApp::Router::MyHelper
   #
+  #       prerequisite :db_connected?
+  #
   #       match SomeOtherRouter.new
   #       # `mount` is an alias of `match`
   #       mount AnotherRouter.new
@@ -65,6 +67,10 @@ class MessageRouter
   #
   #       def user_name(env)
   #         env['user_name'] ||= User.find(env['from'])
+  #       end
+  #
+  #       def db_connected?
+  #         Database.connected?
   #       end
   #     end
   #
@@ -162,10 +168,24 @@ class MessageRouter
       end
       alias :mount :match
 
+      # Defines a prerequisite for this router. Prerequisites are like rules,
+      # except that if any of them don't match, the rest of the router is
+      # skipped.
+      # Anything that can be the 1st argument to `match` can be passed as an
+      # argument to `prerequisite`.
+      def prerequisite(arg=nil, &block)
+        arg ||= block if block
+        prerequisites << arg
+      end
+
       # The rules are defined at the class level. But any helper methods
       # referenced by Symbols are defined/executed at the instance level.
       def rules
         @rules ||= []
+      end
+
+      def prerequisites
+        @prerequisites ||= []
       end
     end
 
@@ -181,6 +201,9 @@ class MessageRouter
       # instance method; however, instance methods are not available until
       # after an instance is created.
       self.class.rules.each {|rule| match *rule }
+
+      @prerequisites = []
+      self.class.prerequisites.each {|prerequisite| @prerequisites << normalize_match_params(prerequisite) }
     end
 
     # Kicks off the router. 'env' is a Hash. The keys are up to the user;
@@ -204,6 +227,16 @@ class MessageRouter
       # and incorrect results. We may want to introduce a RouterRun object to
       # encapsulate one invocation of this #call method.
       @env = env
+
+      # All prerequisites must return true in order to continue.
+      return false unless @prerequisites.all? do |should_i|
+        if should_i.kind_of?(Proc)
+          self.instance_eval &should_i
+        else
+          should_i.call @env
+        end
+      end
+
       @rules.detect do |should_i, do_this|
         should_i = if should_i.kind_of?(Proc)
           self.instance_eval &should_i
