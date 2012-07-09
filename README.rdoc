@@ -164,21 +164,7 @@ A user's router might look like this:
     end
 This would make all instance variables inside the helpers safe and intuitive. I'd need to double check, but I think Ruby's constant lookup method would allow for inheritance to work fairly intuitively as long as the Run class and the router class both inherit from the same place. (I.e. if you inherit from MyBaseRouter, then your run class should also inherit from MyBaseRouter::Run.)
 
-Alias `match` as `mount` so that the code for mounting subrouters reads more clearly. For example:
-    class MainRouter < MessageRouter::Router
-      mount SomeOtherRouter.new
-      mount OnlyForCoolPeopleRouter.new
-      match do
-        raise "nothing else matched"
-      end
-    end
-
 Allow router classes to have a sort of `before_filter` or `prerequisit` method. If it returns nil or false, then nothing in the router matches. Basically, before running #call, check if the object responds to `before_filter`. If it does, then run that and only continue if it returns a true value. Perhaps a 2nd method could be supported that would raise an exception if it is false instead of just skipping the router.
-
-Allow using a hashrocket `=>` to separate a symbol from the code to run. For example:
-    mount :cool? => OnlyForCoolPeopleRouter.new
-instead of
-    mount :cool?, OnlyForCoolPeopleRouter.new
 
 
 == License

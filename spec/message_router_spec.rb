@@ -205,6 +205,16 @@ describe MessageRouter::Router do
         env['did_it_run'].should be_true
       end
 
+      it 'accepts a Hash with a symbol as its only key and a Proc as its only value' do
+        env = {}
+        router = Class.new MessageRouter::Router do
+          match :true_method => (Proc.new { env['did_it_run'] = true })
+          def true_method; true; end
+        end.new
+        router.call env
+        env['did_it_run'].should be_true
+      end
+
       it 'raises an execption when no arguments and no block is given' do
         lambda {
           router = Class.new MessageRouter::Router do

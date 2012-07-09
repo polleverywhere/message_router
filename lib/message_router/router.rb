@@ -32,6 +32,8 @@ class MessageRouter
   #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
   #       end
   #
+  #       match :user_name => PriorityUsernameRouter.new
+  #       match :user_name, OldStyleUsernameRouter.new
   #       match :user_name do
   #         send_reply "I found you! Your name is #{user_name}.", env
   #       end
@@ -136,8 +138,15 @@ class MessageRouter
           raise ArgumentError, "You must provide either a block or an argument which responds to call."
         when 1
           if args[0].respond_to?(:call)
-            do_this  = args[0]
             should_i = true
+            do_this  = args[0]
+          elsif args[0].kind_of?(Hash) && args[0].values.size == 1 && args[0].values[0].respond_to?(:call)
+            # Syntactical suger to make:
+            #     match :cool? => OnlyForCoolPeopleRouter.new
+            # work just like:
+            #     match :cool?, OnlyForCoolPeopleRouter.new
+            should_i = args[0].keys[0]
+            do_this  = args[0].values[0]
           else
             raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
           end
