@@ -148,6 +148,13 @@ describe MessageRouter::Router do
               }
             )
           end
+
+          it 'accepts keys that are missing (but is always false)' do
+            $thing_to_match = {'i dont exist' => /.*/}
+            router.call(env)
+            $did_it_run.should == nil
+            $did_it_run = nil # reset for next time
+          end
         end
       end
 
