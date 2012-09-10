@@ -16,11 +16,17 @@ class MessageRouter
   #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
   #       end
   #
+  #       # Matches if the first word of env['body'] is PING (case insensitive).
+  #       # Overwrite #default_attribute in your router to match against a
+  #       # different attribute.
   #       match 'ping' do
   #         PingCounter.increment!
   #         send_reply 'pong', env
   #       end
   #
+  #       # Matches if env['body'] matches the given Regexp.
+  #       # Overwrite #default_attribute in your router to match against a
+  #       # different attribute.
   #       match /\Ahelp/i do
   #         SupportQueue.contact_asap(env['from'])
   #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
@@ -271,8 +277,7 @@ class MessageRouter
 
       case should_i
       when Regexp, String
-        # TODO: Consider making this default attribute configurable.
-        normalize_match_params 'body' => should_i
+        normalize_match_params default_attribute => should_i
 
       when TrueClass, FalseClass, NilClass
         Proc.new { should_i }
@@ -299,7 +304,6 @@ class MessageRouter
         # Assume it already responds to #call.
         should_i
       end
-
     end
 
     def attr_matches?(attr, val)
@@ -315,6 +319,10 @@ class MessageRouter
       else
         raise "Unexpected value '#{val.inspect}'. Should be String, Regexp, or Array of Strings and Regexps."
       end
+    end
+
+    def default_attribute
+      'body'
     end
   end
 end
