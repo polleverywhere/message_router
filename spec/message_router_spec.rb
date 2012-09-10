@@ -80,7 +80,7 @@ describe MessageRouter::Router do
             match(/bean/)   { env['result'] = 'magical fruit' }
 
             def default_attribute
-              'tacos'
+              env['tacos']
             end
           end.new
         end

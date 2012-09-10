@@ -18,7 +18,7 @@ class MessageRouter
   #
   #       # Matches if the first word of env['body'] is PING (case insensitive).
   #       # Overwrite #default_attribute in your router to match against a
-  #       # different attribute.
+  #       # different value.
   #       match 'ping' do
   #         PingCounter.increment!
   #         send_reply 'pong', env
@@ -26,7 +26,7 @@ class MessageRouter
   #
   #       # Matches if env['body'] matches the given Regexp.
   #       # Overwrite #default_attribute in your router to match against a
-  #       # different attribute.
+  #       # different value.
   #       match /\Ahelp/i do
   #         SupportQueue.contact_asap(env['from'])
   #         send_reply 'Looks like you need some help. Hold tight someone will call you soon.', env
@@ -277,7 +277,7 @@ class MessageRouter
 
       case should_i
       when Regexp, String
-        normalize_match_params default_attribute => should_i
+        Proc.new { attr_matches? default_attribute, should_i }
 
       when TrueClass, FalseClass, NilClass
         Proc.new { should_i }
@@ -322,7 +322,7 @@ class MessageRouter
     end
 
     def default_attribute
-      'body'
+      env['body']
     end
   end
 end
