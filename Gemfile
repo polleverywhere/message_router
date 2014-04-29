@@ -5,7 +5,7 @@ gemspec
 
 group :test, :development do
   gem 'rspec'
-  gem 'rb-fsevent'
+  gem 'listen'
   gem 'growl'
   gem 'guard'
   gem 'guard-rspec'
