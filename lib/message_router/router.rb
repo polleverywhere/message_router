@@ -8,9 +8,9 @@ class MessageRouter
   #
   #       prerequisite :db_connected?
   #
-  #       match SomeOtherRouter.new
+  #       match SomeOtherRouter
   #       # `mount` is an alias of `match`
-  #       mount AnotherRouter.new
+  #       mount AnotherRouter
   #
   #       match(lambda { env['from'].nil? }) do
   #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
@@ -40,13 +40,13 @@ class MessageRouter
   #         send_reply "Sorry, you are trying to use a deprecated short code. Please try again.", env
   #       end
   #
-  #       match :user_name => PriorityUsernameRouter.new
-  #       match :user_name, OldStyleUsernameRouter.new
+  #       match :user_name => PriorityUsernameRouter
+  #       match :user_name, OldStyleUsernameRouter
   #       match :user_name do
   #         send_reply "I found you! Your name is #{user_name}.", env
   #       end
   #
-  #       match %w(stop end quit), StopRouter.new
+  #       match %w(stop end quit), StopRouter
   #
   #       # Array elements don't need to be the same type
   #       match [
@@ -54,7 +54,7 @@ class MessageRouter
   #         {'to' => %w(12345 54321)},
   #         {'RAILS_ENV' => 'test'},
   #         'test'
-  #       ], TestRouter.new
+  #       ], TestRouter
   #
   #       # Works inside a Hash too
   #       match 'from' => ['12345', '54321', /111\d\d/] do
@@ -80,7 +80,7 @@ class MessageRouter
   #       end
   #     end
   #
-  #     router = MyApp::Router::Application.new
+  #     router = MyApp::Router::Application
   #     router.call({})  # Logs an error about not knowing who the message is from
   #     router.call({'from' => 'mr-smith', 'body' => 'ping'})  # Sends a 'pong' reply
   #     router.call({'from' => 'mr-smith', 'to' => 12345})     # Sends a deprecation warning reply
@@ -193,13 +193,33 @@ class MessageRouter
       def prerequisites
         @prerequisites ||= []
       end
+
+      # Kicks off the router. 'env' is a Hash. The keys are up to the user;
+      # however, the default key (used when a matcher is just a String or Regexp)
+      # is 'body'. If you don't specify this key, then String and Regexp matchers
+      # will always be false.
+      # Returns nil if no rules match
+      # Returns true if a rule matches
+      # A rule "matches" if both its procs return true. For example:
+      #     match(true) { true }
+      # matches. However:
+      #     match(true) { false }
+      # does not count as a match. This allows us to mount sub-routers and
+      # continue trying other rules if those subrouters fail to match something.
+      # However, this does mean you need to be careful when writing the 2nd
+      # argument to #match. If you return nil or false, the router will keep
+      # looking for another match.
+      def call(env)
+        new(env).run
+      end
     end
 
 
     # This method initializes all the rules stored at the class level. When you
     # create your subclass, if you want to add your own initializer, it is very
     # important to call `super` or none of your rules will be matched.
-    def initialize
+    def initialize(env) #:nodoc:
+      @env = env
       @rules = []
       # Actually create the rules so that the procs we create are in the
       # context of an instance of this object. This is most important when the
@@ -212,28 +232,7 @@ class MessageRouter
       self.class.prerequisites.each {|prerequisite| @prerequisites << normalize_match_params(prerequisite) }
     end
 
-    # Kicks off the router. 'env' is a Hash. The keys are up to the user;
-    # however, the default key (used when a matcher is just a String or Regexp)
-    # is 'body'. If you don't specify this key, then String and Regexp matchers
-    # will always be false.
-    # Returns nil if no rules match
-    # Returns true if a rule matches
-    # A rule "matches" if both its procs return true. For example:
-    #     match(true) { true }
-    # matches. However:
-    #     match(true) { false }
-    # does not count as a match. This allows us to mount sub-routers and
-    # continue trying other rules if those subrouters fail to match something.
-    # However, this does mean you need to be careful when writing the 2nd
-    # argument to #match. If you return nil or false, the router will keep
-    # looking for another match.
-    def call(env)
-      # I'm pretty sure this is NOT thread safe. Having two threads use the
-      # same router at the same time will almost certainly give you VERY weird
-      # and incorrect results. We may want to introduce a RouterRun object to
-      # encapsulate one invocation of this #call method.
-      @env = env
-
+    def run #:nodoc:
       # All prerequisites must return true in order to continue.
       return false unless @prerequisites.all? do |should_i|
         if should_i.kind_of?(Proc)
@@ -260,8 +259,6 @@ class MessageRouter
           return true if do_this
         end
       end
-    ensure
-      @env = nil
     end
 
 

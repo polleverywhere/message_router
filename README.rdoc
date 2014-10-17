@@ -15,30 +15,30 @@ See rdoc for MessageRouter::Router.build (lib/message_router/router.rb) for exam
 
 And now some irb action.
 
-    1.8.7 :001 > class HelloRouter < MessageRouter::Router
-    1.8.7 :002?>     match /hi/ do
-    1.8.7 :003 >           puts "Hi there. You sent me: #{env.inspect}"
-    1.8.7 :004?>         true # puts returns nil, and that would fail the matcher
-    1.8.7 :005?>       end
-    1.8.7 :006?>   end
-     => [[/hi/, #<Proc:0x00000000026963b8@(irb):2>]] 
-    1.8.7 :007 > HelloRouter.new.call({'body' => 'can you say hi to me?'})
-    Hi there. You sent me: {'body'=>"can you say hi to me?"}
-     => true 
-    1.8.7 :008 > class MainRouter < MessageRouter::Router
-    1.8.7 :009?>     match({'to' => 'greeter'}, HelloRouter.new)
-    1.8.7 :010?>     match(true) do
-    1.8.7 :011 >           puts "WTF? I don't know how to do that!"
-    1.8.7 :012?>         true # puts returns nil, and that would fail the matcher
-    1.8.7 :013?>       end
-    1.8.7 :014?>   end
-     => [[{:to=>"greeter"}, #<HelloRouter:0x25fef90 @rules=[[#<Proc:0x000000000266b2d0@/home/paul/sc/pe/message_router/lib/message_router/router.rb:165>, #<Proc:0x00000000026963b8@(irb):2>]]>], [true, #<Proc:0x00000000025ff580@(irb):10>]] 
-    1.8.7 :015 > MainRouter.new.call({'body' => 'can you say hi to me?'})
-    WTF? I don't know how to do that!
-     => true 
-    1.8.7 :016 > MainRouter.new.call({'body' => 'can you say hi to me?', 'to' => 'greeter'})
-    Hi there. You sent me: {'body'=>"can you say hi to me?", 'to'=>"greeter"}
-     => true 
+    class HelloRouter < MessageRouter::Router
+      match /hi/ do
+        puts "Hi there. You sent me: #{env.inspect}"
+        true # puts returns nil, and that would fail the matcher
+      end
+    end
+    # => [[/hi/, #<Proc:0x00000000026963b8@(irb):2>]]
+    HelloRouter.call({'body' => 'can you say hi to me?'})
+    # Hi there. You sent me: {'body'=>"can you say hi to me?"}
+    # => true
+    class MainRouter < MessageRouter::Router
+      match({'to' => 'greeter'}, HelloRouter)
+      match(true) do
+        puts "WTF? I don't know how to do that!"
+        true # puts returns nil, and that would fail the matcher
+      end
+    end
+    # => [[{"to"=>"greeter"}, HelloRouter], [true, #<Proc:0x007f98c39e5b70@(irb):13>]]
+    MainRouter.call({'body' => 'can you say hi to me?'})
+    # WTF? I don't know how to do that!
+    # => true
+    MainRouter.call({'body' => 'can you say hi to me?', 'to' => 'greeter'})
+    # Hi there. You sent me: {'body'=>"can you say hi to me?", 'to'=>"greeter"}
+    # => true
 
 
 == TODO
@@ -60,7 +60,7 @@ Add tests to ensure that instance variables can be shared between initializers a
         @sender.puts 'something'
       end
     end
-    MyRouter.new(:sender => STDOUT).call({})  # prints out 'something' to standard out.
+    MyRouter(:sender => STDOUT).call({})  # prints out 'something' to standard out.
 
 Pass Regexp captures on to the proc when there is a match. Examples:
     match /some (cool|awesome) thing/ do |match|

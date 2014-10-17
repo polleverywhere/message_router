@@ -32,7 +32,7 @@ describe MessageRouter::Router do
           def always_false
             false
           end
-        end.new
+        end
       end
 
       let :the_test do
@@ -82,7 +82,7 @@ describe MessageRouter::Router do
             def default_attribute
               env['tacos']
             end
-          end.new
+          end
         end
 
         it 'accepts a string to match against the 1st word in the default attribute' do
@@ -122,7 +122,7 @@ describe MessageRouter::Router do
               $run_count += 1
               nil # Return nil to ensure this matcher failed.
             end
-          end.new
+          end
 
           router.call({})
           $run_count.should == 1
@@ -135,7 +135,7 @@ describe MessageRouter::Router do
               $run_count += 1
               nil # Return nil to ensure this matcher failed.
             end
-          end.new
+          end
 
           router.call({}).should == nil
         end
@@ -194,7 +194,7 @@ describe MessageRouter::Router do
         env = {}
         router = Class.new MessageRouter::Router do
           match(true, Proc.new { env['did_it_run'] = true })
-        end.new
+        end
         router.call env
         env['did_it_run'].should be_true
       end
@@ -203,7 +203,7 @@ describe MessageRouter::Router do
         env = {}
         router = Class.new MessageRouter::Router do
           match(true) { env['did_it_run'] = true }
-        end.new
+        end
         router.call env
         env['did_it_run'].should be_true
       end
@@ -212,7 +212,7 @@ describe MessageRouter::Router do
         lambda {
           router = Class.new MessageRouter::Router do
             match(true, Proc.new { env['did_it_run'] = true }) { env['did_it_run'] = true }
-          end.new
+          end
         }.should raise_error(ArgumentError)
       end
 
@@ -220,7 +220,7 @@ describe MessageRouter::Router do
         lambda {
           router = Class.new MessageRouter::Router do
             match true
-          end.new
+          end
         }.should raise_error(ArgumentError)
       end
     end
@@ -229,7 +229,7 @@ describe MessageRouter::Router do
       env = {}
       router = Class.new MessageRouter::Router do
         match { env['did_it_run'] = true }
-      end.new
+      end
       router.call env
       env['did_it_run'].should be_true
     end
@@ -238,7 +238,7 @@ describe MessageRouter::Router do
       env = {}
       router = Class.new MessageRouter::Router do
         match(Proc.new { env['did_it_run'] = true })
-      end.new
+      end
       router.call env
       env['did_it_run'].should be_true
     end
@@ -248,7 +248,7 @@ describe MessageRouter::Router do
       router = Class.new MessageRouter::Router do
         match :true_method => (Proc.new { env['did_it_run'] = true })
         def true_method; true; end
-      end.new
+      end
       router.call env
       env['did_it_run'].should be_true
     end
@@ -257,7 +257,7 @@ describe MessageRouter::Router do
       lambda {
         router = Class.new MessageRouter::Router do
           match
-        end.new
+        end
       }.should raise_error(ArgumentError)
     end
   end
@@ -265,7 +265,7 @@ describe MessageRouter::Router do
 
   describe "#call" do
     it "returns nil with no rules" do
-      r = MessageRouter::Router.new
+      r = MessageRouter::Router
       r.call({}).should be_nil
     end
 
@@ -273,7 +273,7 @@ describe MessageRouter::Router do
       subject do
         Class.new MessageRouter::Router do
           match(true) { env[:did_it_run] = true }
-        end.new
+        end
       end
 
       it "returns true" do
@@ -292,7 +292,7 @@ describe MessageRouter::Router do
           prerequisite :true_method
           match(true) { env[:did_it_run] = true }
           def true_method; true; end
-        end.new
+        end
       end
 
       it "returns true" do
@@ -311,7 +311,7 @@ describe MessageRouter::Router do
           prerequisite :false_method
           match(true) { env[:did_it_run] = true }
           def false_method; false; end
-        end.new
+        end
       end
 
       it "returns false" do
@@ -329,13 +329,13 @@ describe MessageRouter::Router do
         Class.new(MessageRouter::Router) do
           sub_router = Class.new(MessageRouter::Router) do
             match($inner_matcher) { $did_inner_run = true }
-          end.new
+          end
 
           match $outer_matcher do
             $did_outer_run = true
             sub_router.call(env)
           end
-        end.new
+        end
       end
 
       before do
@@ -378,10 +378,10 @@ describe MessageRouter::Router do
             # Define them
             sub_router_1 = Class.new MessageRouter::Router do
               match($inner_matcher_1) { $did_inner_run_1 = true }
-            end.new
+            end
             sub_router_2 = Class.new MessageRouter::Router do
               match($inner_matcher_2) { $did_inner_run_2 = true }
-            end.new
+            end
 
             # 'mount' them
             match $outer_matcher_1 do
@@ -393,7 +393,7 @@ describe MessageRouter::Router do
               $did_outer_run_2 = true
               sub_router_2.call(env)
             end
-          end.new
+          end
         end
 
         it "runs only 1st outer and 1st inner when all match" do
@@ -459,7 +459,7 @@ describe MessageRouter::Router do
               lookup_human_name
             end
            ) { true }
-        end.new
+        end
       end
 
       it 'can access/modify the env via #env' do
@@ -467,11 +467,6 @@ describe MessageRouter::Router do
         router.call(env).should be_true
         $is_john.should be_true            # Prove the inner matcher can see the new value
         env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
-      end
-
-      it '#env is reset after #call has finished' do
-        router.call({'id' => 1}).should be_true
-        router.send(:env).should be_nil
       end
 
       %w(block proc lambda).each do |type|
@@ -487,6 +482,30 @@ describe MessageRouter::Router do
           env = {'match_with' => type}
           router.call(env).should be_true
           env['human_name'].should == 'Jules'
+        end
+      end
+
+      describe "instance variables" do
+        let :router do
+          Class.new MessageRouter::Router do
+            prerequisite :helper_method
+
+            match do
+              env['result'] = @helper_method
+            end
+
+            private
+            def helper_method
+              @helper_method ||= 0
+              @helper_method += 1
+            end
+          end
+        end
+
+        it "doesn't leak state to a 2nd run" do
+          env = {}
+          2.times { router.call(env) }
+          env['result'].should == 1
         end
       end
     end
