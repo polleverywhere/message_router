@@ -448,7 +448,7 @@ describe MessageRouter::Router do
             env['id'] = 2
             env['the_name'] = lookup_human_name
           end)
-          match({'run_a' => 'lambda'}, lambda do
+          match({'run_a' => 'lambda'}, lambda do |args|
             env['id'] = 2
             env['the_name'] = lookup_human_name
           end)

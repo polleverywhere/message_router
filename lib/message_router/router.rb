@@ -12,7 +12,7 @@ class MessageRouter
   #       # `mount` is an alias of `match`
   #       mount AnotherRouter.new
   #
-  #       match(lamba { env['from'].nil? }) do
+  #       match(lambda { env['from'].nil? }) do
   #         Logger.error "Can't reply when when don't know who a message is from: #{env.inspect}"
   #       end
   #
