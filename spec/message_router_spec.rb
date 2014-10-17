@@ -324,6 +324,24 @@ describe MessageRouter::Router do
       end
     end
 
+    describe 'mount routers' do
+      it "can delegate to other routers" do
+        sub_router = Class.new(MessageRouter::Router) do
+          match do
+            env['result'] = true
+          end
+        end
+
+        main_router = Class.new(MessageRouter::Router) do
+          mount sub_router
+        end
+
+        env = {}
+        main_router.call(env)
+        env['result'].should == true
+      end
+    end
+
     describe 'nested routers' do
       def main_router
         Class.new(MessageRouter::Router) do

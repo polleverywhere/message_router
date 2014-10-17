@@ -154,9 +154,9 @@ class MessageRouter
             do_this  = args[0]
           elsif args[0].kind_of?(Hash) && args[0].values.size == 1 && args[0].values[0].respond_to?(:call)
             # Syntactical suger to make:
-            #     match :cool? => OnlyForCoolPeopleRouter.new
+            #     match :cool? => OnlyForCoolPeopleRouter
             # work just like:
-            #     match :cool?, OnlyForCoolPeopleRouter.new
+            #     match :cool?, OnlyForCoolPeopleRouter
             should_i = args[0].keys[0]
             do_this  = args[0].values[0]
           else
@@ -235,38 +235,32 @@ class MessageRouter
     def run #:nodoc:
       # All prerequisites must return true in order to continue.
       return false unless @prerequisites.all? do |should_i|
-        if should_i.kind_of?(Proc)
-          self.instance_eval &should_i
-        else
-          should_i.call @env
-        end
+        self.instance_eval &should_i
       end
 
       @rules.detect do |should_i, do_this|
-        should_i = if should_i.kind_of?(Proc)
-          self.instance_eval &should_i
-        else
-          should_i.call @env
-        end
-
-        if should_i
-          do_this = if do_this.kind_of?(Proc)
-            self.instance_eval &do_this
-          else
-            do_this.call @env
-          end
-
-          return true if do_this
+        if self.instance_eval &should_i
+          return true if self.instance_eval &do_this
         end
       end
     end
 
 
-    private
     def env; @env; end
+    private
 
     def match(should_i, do_this)
-      @rules << [normalize_match_params(should_i), do_this]
+      @rules << [normalize_match_params(should_i), normalize_do_this(do_this)]
+    end
+
+    def normalize_do_this(do_this)
+      if do_this.kind_of?(Proc)
+        do_this
+      else
+        Proc.new do
+          do_this.call(env)
+        end
+      end
     end
 
     def normalize_match_params(should_i=nil, &block)
@@ -297,9 +291,14 @@ class MessageRouter
           end
         end
 
+      when Proc
+        should_i
+
       else
         # Assume it already responds to #call.
-        should_i
+        Proc.new do
+          should_i.call env
+        end
       end
     end
 
