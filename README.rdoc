@@ -1,5 +1,7 @@
 = Message Router
 
+{<img src="https://travis-ci.org/polleverywhere/message_router.svg?branch=master" alt="Build Status" />}[https://travis-ci.org/polleverywhere/message_router]
+
 Message router is a DSL for routing and processing simple messages, like SMS messages or Tweets.
 
 == Installation
