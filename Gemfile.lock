@@ -24,6 +24,7 @@ GEM
       rb-fsevent (>= 0.9.3)
       rb-inotify (>= 0.9)
     nio4r (1.0.0)
+    rake (10.3.2)
     rb-fsevent (0.9.4)
     rb-inotify (0.9.3)
       ffi (>= 0.5.0)
@@ -47,4 +48,5 @@ DEPENDENCIES
   guard-rspec
   listen
   message_router!
+  rake
   rspec
