@@ -521,8 +521,8 @@ describe MessageRouter::Router do
         end
 
         it "doesn't leak state to a 2nd run" do
-          env = {}
-          2.times { router.call(env) }
+          router.call({})
+          env = router.call({})
           env['result'].should == 1
         end
       end

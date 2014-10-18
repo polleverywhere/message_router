@@ -149,7 +149,10 @@ class MessageRouter
         when 0
           raise ArgumentError, "You must provide either a block or an argument which responds to call."
         when 1
-          if args[0].respond_to?(:call)
+          if args[0].respond_to?(:env)
+            should_i = true
+            do_this  = args[0]
+          elsif args[0].respond_to?(:call)
             should_i = true
             do_this  = args[0]
           elsif args[0].kind_of?(Hash) && args[0].values.size == 1 && args[0].values[0].respond_to?(:call)
@@ -240,9 +243,23 @@ class MessageRouter
 
       @rules.detect do |should_i, do_this|
         if self.instance_eval &should_i
-          return true if self.instance_eval &do_this
+          matched
+          @env = self.instance_eval &do_this
+          return env if matched?
         end
       end
+
+      env # always return environment
+    end
+
+    def not_matched
+      env['_matched'] = false
+    end
+    def matched
+      env['_matched'] = true
+    end
+    def matched?
+      !!env['_matched']
     end
 
 
@@ -254,8 +271,11 @@ class MessageRouter
     end
 
     def normalize_do_this(do_this)
-      if do_this.kind_of?(Proc)
-        do_this
+      if do_this.kind_of?(Proc) # This is true for blocks and lamdas too.
+        Proc.new do
+          self.instance_eval &do_this
+          env
+        end
       else
         Proc.new do
           do_this.call(env)
