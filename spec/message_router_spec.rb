@@ -39,12 +39,12 @@ describe MessageRouter::Router do
         Proc.new do |opts|
           $thing_to_match = opts[:true]
           router.call(env)
-          $did_it_run.should == true
+          expect($did_it_run).to eq true
           $did_it_run = nil # reset for next time
 
           $thing_to_match = opts[:false]
           router.call(env)
-          $did_it_run.should == nil
+          expect($did_it_run).to eq nil
           $did_it_run = nil # reset for next time
         end
       end
@@ -87,22 +87,22 @@ describe MessageRouter::Router do
 
         it 'accepts a string to match against the 1st word in the default attribute' do
           r = router.call({ 'tacos' => 'cheese please' })
-          r.matched?.should be_true
-          r.env['result'].should == 'i found cheese'
+          expect(r.matched?).to be_truthy
+          expect(r.env['result']).to eq 'i found cheese'
         end
         it "does not match strings against the 'body' attribute" do
           r = router.call({ 'body' => 'cheese please' })
-          r.matched?.should be_false
+          expect(r.matched?).to be_falsey
         end
 
         it 'accepts a regex to match against the default attribute' do
           r = router.call({ 'tacos' => 'i like beans a lot' })
-          r.matched?.should be_true
-          r.env['result'].should == 'magical fruit'
+          expect(r.matched?).to be_truthy
+          expect(r.env['result']).to eq 'magical fruit'
         end
         it "does not match regex against the 'body' attribute" do
           r = router.call({ 'body' => 'i like beans a lot' })
-          r.matched?.should be_false
+          expect(r.matched?).to be_falsey
         end
       end
 
@@ -125,7 +125,7 @@ describe MessageRouter::Router do
           end
 
           router.call({})
-          $run_count.should == 1
+          expect($run_count).to eq 1
         end
 
         it "returns nil if the 'action' block returns nil" do
@@ -138,7 +138,7 @@ describe MessageRouter::Router do
           end
 
           r = router.call({})
-          r.matched?.should be_true
+          expect(r.matched?).to be_truthy
         end
 
       end
@@ -184,7 +184,7 @@ describe MessageRouter::Router do
         it 'accepts keys that are missing (but is always false)' do
           $thing_to_match = {'i dont exist' => /.*/}
           router.call(env)
-          $did_it_run.should == nil
+          expect($did_it_run).to eq nil
           $did_it_run = nil # reset for next time
         end
       end
@@ -197,7 +197,7 @@ describe MessageRouter::Router do
           match(true, Proc.new { env['did_it_run'] = true })
         end
         router.call env
-        env['did_it_run'].should be_true
+        expect(env['did_it_run']).to be_truthy
       end
 
       it 'accepts a block' do
@@ -206,23 +206,23 @@ describe MessageRouter::Router do
           match(true) { env['did_it_run'] = true }
         end
         router.call env
-        env['did_it_run'].should be_true
+        expect(env['did_it_run']).to be_truthy
       end
 
       it 'raises an execption when both a Proc and a block are given' do
-        lambda {
+        expect {
           router = Class.new MessageRouter::Router do
             match(true, Proc.new { env['did_it_run'] = true }) { env['did_it_run'] = true }
           end
-        }.should raise_error(ArgumentError)
+        }.to raise_error(ArgumentError)
       end
 
       it 'raises an execption when neither a Proc nor a block are given' do
-        lambda {
+        expect {
           router = Class.new MessageRouter::Router do
             match true
           end
-        }.should raise_error(ArgumentError)
+        }.to raise_error(ArgumentError)
       end
     end
 
@@ -232,7 +232,7 @@ describe MessageRouter::Router do
         match { env['did_it_run'] = true }
       end
       router.call env
-      env['did_it_run'].should be_true
+      expect(env['did_it_run']).to be_truthy
     end
 
     it 'defaults the 1st argument to true if only a Proc is given' do
@@ -241,7 +241,7 @@ describe MessageRouter::Router do
         match(Proc.new { env['did_it_run'] = true })
       end
       router.call env
-      env['did_it_run'].should be_true
+      expect(env['did_it_run']).to be_truthy
     end
 
     it 'accepts a Hash with a symbol as its only key and a Proc as its only value' do
@@ -251,15 +251,15 @@ describe MessageRouter::Router do
         def true_method; true; end
       end
       router.call env
-      env['did_it_run'].should be_true
+      expect(env['did_it_run']).to be_truthy
     end
 
     it 'raises an execption when no arguments and no block is given' do
-      lambda {
+      expect {
         router = Class.new MessageRouter::Router do
           match
         end
-      }.should raise_error(ArgumentError)
+      }.to raise_error(ArgumentError)
     end
   end
 
@@ -267,7 +267,7 @@ describe MessageRouter::Router do
   describe "#call" do
     it "does not match with no rules" do
       router = MessageRouter::Router.call({})
-      router.matched?.should be_false
+      expect(router.matched?).to be_falsey
     end
 
     context 'a rule matches' do
@@ -278,12 +278,12 @@ describe MessageRouter::Router do
       end
 
       it "returns true" do
-        subject.call({}).should be_true
+        expect(subject.call({})).to be_truthy
       end
 
       it "calls the matcher's code" do
         subject.call(env = {})
-        env[:did_it_run].should be_true
+        expect(env[:did_it_run]).to be_truthy
       end
     end
 
@@ -297,12 +297,12 @@ describe MessageRouter::Router do
       end
 
       it "returns true" do
-        subject.call({}).should be_true
+        expect(subject.call({})).to be_truthy
       end
 
       it "calls the matcher's code" do
         subject.call(env = {})
-        env[:did_it_run].should be_true
+        expect(env[:did_it_run]).to be_truthy
       end
     end
 
@@ -316,12 +316,12 @@ describe MessageRouter::Router do
       end
 
       it "returns false" do
-        subject.call({}).should be_false
+        expect(subject.call({})).to be_falsey
       end
 
       it "doesn't calls the matcher's code" do
         subject.call(env = {})
-        env[:did_it_run].should_not be_true
+        expect(env[:did_it_run]).to_not be_truthy
       end
     end
 
@@ -338,7 +338,7 @@ describe MessageRouter::Router do
         end
 
         r = main_router.call({})
-        r.env['result'].should == true
+        expect(r.env['result']).to eq true
       end
     end
 
@@ -353,7 +353,7 @@ describe MessageRouter::Router do
 
       it "sets matched to false in env" do
         r = router.call({})
-        r.matched?.should be_false
+        expect(r.matched?).to be_falsey
       end
     end
 
@@ -371,7 +371,7 @@ describe MessageRouter::Router do
 
       it "sets matched to true in env" do
         r = router.call({})
-        r.matched?.should be_true
+        expect(r.matched?).to be_truthy
       end
     end
 
@@ -396,9 +396,9 @@ describe MessageRouter::Router do
       it 'runs both when both match' do
         $outer_matcher = $inner_matcher = true
 
-        main_router.call({}).should be_true
-        $did_outer_run.should be_true
-        $did_inner_run.should be_true
+        expect(main_router.call({})).to be_truthy
+        expect($did_outer_run).to be_truthy
+        expect($did_inner_run).to be_truthy
       end
 
       it "runs outer only when outer matches and inner doesn't" do
@@ -406,8 +406,8 @@ describe MessageRouter::Router do
         $inner_matcher = false
 
         main_router.call({})
-        $did_outer_run.should be_true
-        $did_inner_run.should be_nil
+        expect($did_outer_run).to be_truthy
+        expect($did_inner_run).to be_nil
       end
 
       it "runs neither when inner matches and outer doesn't" do
@@ -415,8 +415,8 @@ describe MessageRouter::Router do
         $inner_matcher = true
 
         main_router.call({})
-        $did_outer_run.should be_nil
-        $did_inner_run.should be_nil
+        expect($did_outer_run).to be_nil
+        expect($did_inner_run).to be_nil
       end
 
       context 'multiple inner matchers' do
@@ -443,18 +443,18 @@ describe MessageRouter::Router do
         it "runs only 1st outer and 1st inner when all match" do
           $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = true
 
-          main_router.call({}).should be_true
-          $did_inner_run_1.should be_true
-          $did_inner_run_2.should be_nil
+          expect(main_router.call({})).to be_truthy
+          expect($did_inner_run_1).to be_truthy
+          expect($did_inner_run_2).to be_nil
         end
 
         it "runs both outers, and 2nd inner when all but 1st inner match" do
           $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_2 = true
           $inner_matcher_1 = false
 
-          main_router.call({}).should be_true
-          $did_inner_run_1.should be_nil
-          $did_inner_run_2.should be_true
+          expect(main_router.call({})).to be_truthy
+          expect($did_inner_run_1).to be_nil
+          expect($did_inner_run_2).to be_truthy
         end
 
       end
@@ -504,24 +504,24 @@ describe MessageRouter::Router do
 
       it 'can access/modify the env via #env' do
         r = router.call({'id' => 1})
-        r.matched?.should be_true
-        $is_john.should be_true            # Prove the inner matcher can see the new value
-        r.env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
+        expect(r.matched?).to be_truthy
+        expect($is_john).to be_truthy            # Prove the inner matcher can see the new value
+        expect(r.env['human_name']).to eq 'John' # Prove we can get at the value after the router has finished.
       end
 
       %w(block proc lambda).each do |type|
         it "can be accessed from a #{type} that is the 2nd argument" do
           r = router.call({'run_a' => type})
-          r.matched?.should be_true
-          r.env['the_name'].should == 'Jim'
+          expect(r.matched?).to be_truthy
+          expect(r.env['the_name']).to eq 'Jim'
         end
       end
 
       %w(proc lambda).each do |type|
         it "can be accessed from a #{type} that is the 1st argument" do
           r = router.call({'match_with' => type})
-          r.matched?.should be_true
-          r.env['human_name'].should == 'Jules'
+          expect(r.matched?).to be_truthy
+          expect(r.env['human_name']).to eq 'Jules'
         end
       end
 
@@ -545,7 +545,7 @@ describe MessageRouter::Router do
         it "doesn't leak state to a 2nd run" do
           router.call({})
           r = router.call({})
-          r.env['result'].should == 1
+          expect(r.env['result']).to eq 1
         end
       end
     end
