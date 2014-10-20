@@ -240,7 +240,7 @@ class MessageRouter
 
     def run #:nodoc:
       # All prerequisites must return true in order to continue.
-      return false unless @prerequisites.all? do |condition|
+      return self unless @prerequisites.all? do |condition|
         self.instance_eval &condition
       end
 

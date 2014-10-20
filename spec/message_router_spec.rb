@@ -271,8 +271,8 @@ describe MessageRouter::Router do
         end
       end
 
-      it "returns true" do
-        expect(subject.call({})).to be_truthy
+      it "matches" do
+        expect(subject.call({}).matched?).to be_truthy
       end
 
       it "calls the matcher's code" do
@@ -290,8 +290,8 @@ describe MessageRouter::Router do
         end
       end
 
-      it "returns false" do
-        expect(subject.call({})).to be_falsey
+      it "doesn't match" do
+        expect(subject.call({}).matched?).to be_falsey
       end
 
       it "doesn't calls the matcher's code" do
