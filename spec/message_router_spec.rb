@@ -115,7 +115,7 @@ describe MessageRouter::Router do
       end
 
       describe 'matching an Array' do
-        it "doesn't run the 'do_this' block multiple times if there are multiple matches" do
+        it "doesn't run the 'action' block multiple times if there are multiple matches" do
           $run_count = 0
           router = Class.new(MessageRouter::Router) do
             match [true, true] do
@@ -128,7 +128,7 @@ describe MessageRouter::Router do
           $run_count.should == 1
         end
 
-        it "returns nil if the 'do_this' block returns nil" do
+        it "returns nil if the 'action' block returns nil" do
           $run_count = 0
           router = Class.new(MessageRouter::Router) do
             match [true, true] do

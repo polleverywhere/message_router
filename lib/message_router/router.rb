@@ -150,30 +150,30 @@ class MessageRouter
           raise ArgumentError, "You must provide either a block or an argument which responds to call."
         when 1
           if args[0].respond_to?(:env)
-            should_i = true
-            do_this  = args[0]
+            condition = true
+            action  = args[0]
           elsif args[0].respond_to?(:call)
-            should_i = true
-            do_this  = args[0]
+            condition = true
+            action  = args[0]
           elsif args[0].kind_of?(Hash) && args[0].values.size == 1 && args[0].values[0].respond_to?(:call)
             # Syntactical suger to make:
             #     match :cool? => OnlyForCoolPeopleRouter
             # work just like:
             #     match :cool?, OnlyForCoolPeopleRouter
-            should_i = args[0].keys[0]
-            do_this  = args[0].values[0]
+            condition = args[0].keys[0]
+            action  = args[0].values[0]
           else
             raise ArgumentError, "You must provide either a block or a 2nd argument which responds to call."
           end
         when 2
-          should_i, do_this = args
-          raise ArgumentError, "The 2nd argument must respond to call." unless do_this.respond_to?(:call)
+          condition, action = args
+          raise ArgumentError, "The 2nd argument must respond to call." unless action.respond_to?(:call)
         else
           raise ArgumentError, "Too many arguments. Note: you may not provide a block when a 2nd argument has been provided."
         end
 
         # Save the arguments for later.
-        rules << [should_i, do_this]
+        rules << [condition, action]
       end
       alias :mount :match
 
@@ -237,14 +237,14 @@ class MessageRouter
 
     def run #:nodoc:
       # All prerequisites must return true in order to continue.
-      return false unless @prerequisites.all? do |should_i|
-        self.instance_eval &should_i
+      return false unless @prerequisites.all? do |condition|
+        self.instance_eval &condition
       end
 
-      @rules.detect do |should_i, do_this|
-        if self.instance_eval &should_i
+      @rules.detect do |condition, action|
+        if self.instance_eval &condition
           matched
-          @env = self.instance_eval &do_this
+          @env = self.instance_eval &action
           return env if matched?
         end
       end
@@ -266,58 +266,58 @@ class MessageRouter
     def env; @env; end
     private
 
-    def match(should_i, do_this)
-      @rules << [normalize_match_params(should_i), normalize_do_this(do_this)]
+    def match(condition, action)
+      @rules << [normalize_match_params(condition), normalize_action(action)]
     end
 
-    def normalize_do_this(do_this)
-      if do_this.kind_of?(Proc) # This is true for blocks and lamdas too.
+    def normalize_action(action)
+      if action.kind_of?(Proc) # This is true for blocks and lamdas too.
         Proc.new do
-          self.instance_eval &do_this
+          self.instance_eval &action
           env
         end
       else
         Proc.new do
-          do_this.call(env)
+          action.call(env)
         end
       end
     end
 
-    def normalize_match_params(should_i=nil, &block)
-      should_i ||= block if block
+    def normalize_match_params(condition=nil, &block)
+      condition ||= block if block
 
-      case should_i
+      case condition
       when Regexp, String
-        Proc.new { attr_matches? default_attribute, should_i }
+        Proc.new { attr_matches? default_attribute, condition }
 
       when TrueClass, FalseClass, NilClass
-        Proc.new { should_i }
+        Proc.new { condition }
 
       when Symbol
         Proc.new do
-          self.send should_i
+          self.send condition
         end
 
       when Array
-        should_i = should_i.map {|x| normalize_match_params x}
+        condition = condition.map {|x| normalize_match_params x}
         Proc.new do
-          should_i.any? { |x| x.call env }
+          condition.any? { |x| x.call env }
         end
 
       when Hash
         Proc.new do
-          should_i.all? do |key, val|
+          condition.all? do |key, val|
             attr_matches? env[key], val
           end
         end
 
       when Proc
-        should_i
+        condition
 
       else
         # Assume it already responds to #call.
         Proc.new do
-          should_i.call env
+          condition.call env
         end
       end
     end
