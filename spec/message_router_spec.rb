@@ -86,26 +86,22 @@ describe MessageRouter::Router do
         end
 
         it 'accepts a string to match against the 1st word in the default attribute' do
-          env = { 'tacos' => 'cheese please' }
-          router.call(env).should be_true
-          env['result'].should == 'i found cheese'
+          r = router.call({ 'tacos' => 'cheese please' })
+          r.matched?.should be_true
+          r.env['result'].should == 'i found cheese'
         end
         it "does not match strings against the 'body' attribute" do
-          env = { 'body' => 'cheese please' }
-          r = router.new(env)
-          r.run
+          r = router.call({ 'body' => 'cheese please' })
           r.matched?.should be_false
         end
 
         it 'accepts a regex to match against the default attribute' do
-          env = { 'tacos' => 'i like beans a lot' }
-          router.call(env).should be_true
-          env['result'].should == 'magical fruit'
+          r = router.call({ 'tacos' => 'i like beans a lot' })
+          r.matched?.should be_true
+          r.env['result'].should == 'magical fruit'
         end
         it "does not match regex against the 'body' attribute" do
-          env = { 'body' => 'i like beans a lot' }
-          r = router.new(env)
-          r.run
+          r = router.call({ 'body' => 'i like beans a lot' })
           r.matched?.should be_false
         end
       end
@@ -141,8 +137,7 @@ describe MessageRouter::Router do
             end
           end
 
-          r = router.new({})
-          r.run
+          r = router.call({})
           r.matched?.should be_true
         end
 
@@ -271,8 +266,7 @@ describe MessageRouter::Router do
 
   describe "#call" do
     it "does not match with no rules" do
-      router = MessageRouter::Router.new({})
-      router.run
+      router = MessageRouter::Router.call({})
       router.matched?.should be_false
     end
 
@@ -343,9 +337,8 @@ describe MessageRouter::Router do
           mount sub_router
         end
 
-        env = {}
-        main_router.call(env)
-        env['result'].should == true
+        r = main_router.call({})
+        r.env['result'].should == true
       end
     end
 
@@ -359,8 +352,7 @@ describe MessageRouter::Router do
       end
 
       it "sets matched to false in env" do
-        r = router.new({})
-        r.run
+        r = router.call({})
         r.matched?.should be_false
       end
     end
@@ -378,8 +370,7 @@ describe MessageRouter::Router do
       end
 
       it "sets matched to true in env" do
-        r = router.new({})
-        r.run
+        r = router.call({})
         r.matched?.should be_true
       end
     end
@@ -512,25 +503,25 @@ describe MessageRouter::Router do
       end
 
       it 'can access/modify the env via #env' do
-        env = {'id' => 1}
-        router.call(env).should be_true
+        r = router.call({'id' => 1})
+        r.matched?.should be_true
         $is_john.should be_true            # Prove the inner matcher can see the new value
-        env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
+        r.env['human_name'].should == 'John' # Prove we can get at the value after the router has finished.
       end
 
       %w(block proc lambda).each do |type|
         it "can be accessed from a #{type} that is the 2nd argument" do
-          env = {'run_a' => type}
-          router.call(env).should be_true
-          env['the_name'].should == 'Jim'
+          r = router.call({'run_a' => type})
+          r.matched?.should be_true
+          r.env['the_name'].should == 'Jim'
         end
       end
 
       %w(proc lambda).each do |type|
         it "can be accessed from a #{type} that is the 1st argument" do
-          env = {'match_with' => type}
-          router.call(env).should be_true
-          env['human_name'].should == 'Jules'
+          r = router.call({'match_with' => type})
+          r.matched?.should be_true
+          r.env['human_name'].should == 'Jules'
         end
       end
 
@@ -553,8 +544,8 @@ describe MessageRouter::Router do
 
         it "doesn't leak state to a 2nd run" do
           router.call({})
-          env = router.call({})
-          env['result'].should == 1
+          r = router.call({})
+          r.env['result'].should == 1
         end
       end
     end

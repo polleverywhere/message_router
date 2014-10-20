@@ -201,17 +201,14 @@ class MessageRouter
       # however, the default key (used when a matcher is just a String or Regexp)
       # is 'body'. If you don't specify this key, then String and Regexp matchers
       # will always be false.
-      # Returns nil if no rules match
-      # Returns true if a rule matches
-      # A rule "matches" if both its procs return true. For example:
-      #     match(true) { true }
+      # Returns a new instance of this class, that gets run before being returned
+      # A rule "matches" if its condition return true and the action does not
+      # explicitly call not_matched. For example:
+      #     match(true) { }
       # matches. However:
-      #     match(true) { false }
+      #     match(true) { not_matched }
       # does not count as a match. This allows us to mount sub-routers and
       # continue trying other rules if those subrouters fail to match something.
-      # However, this does mean you need to be careful when writing the 2nd
-      # argument to #match. If you return nil or false, the router will keep
-      # looking for another match.
       def call(env)
         new(env).run
       end
@@ -247,12 +244,13 @@ class MessageRouter
       @rules.detect do |condition, action|
         if self.instance_eval &condition
           matched
-          @env = self.instance_eval &action
-          return env if matched?
+          r = self.instance_eval &action
+          @env = r.respond_to?(:env) ? r.env : r
+          return self if matched?
         end
       end
 
-      env # always return environment
+      self # always return router instance
     end
 
     def not_matched
