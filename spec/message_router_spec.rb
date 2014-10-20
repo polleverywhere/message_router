@@ -389,9 +389,6 @@ describe MessageRouter::Router do
       end
 
       it "runs neither when inner matches and outer doesn't" do
-        $outer_matcher = false
-        $inner_matcher = true
-
         r = main_router.new({}).tap do |r|
           r.outer_matcher = false
           r.inner_matcher = true
@@ -401,39 +398,29 @@ describe MessageRouter::Router do
       end
 
       context 'multiple inner matchers' do
-        before do
-          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = nil
-        end
-
-        def main_router
+        def main_router(inner_matcher_1)
           Class.new MessageRouter::Router do
             # Define them
             sub_router_1 = Class.new MessageRouter::Router do
-              match($inner_matcher_1) { env['did_inner_run_1'] = true }
+              match(inner_matcher_1) { env['did_inner_run_1'] = true }
             end
             sub_router_2 = Class.new MessageRouter::Router do
-              match($inner_matcher_2) { env['did_inner_run_2'] = true }
+              match(true) { env['did_inner_run_2'] = true }
             end
 
-            # 'mount' them
-            match $outer_matcher_1 => sub_router_1
-            match $outer_matcher_2 => sub_router_2
+            mount sub_router_1
+            mount sub_router_2
           end
         end
 
         it "runs only 1st outer and 1st inner when all match" do
-          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = true
-
-          r = main_router.call({})
+          r = main_router(true).call({})
           expect(r.env['did_inner_run_1']).to eq true
           expect(r.env['did_inner_run_2']).to eq nil
         end
 
         it "runs both outers, and 2nd inner when all but 1st inner match" do
-          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_2 = true
-          $inner_matcher_1 = false
-
-          r = main_router.call({})
+          r = main_router(false).call({})
           expect(r.env['did_inner_run_1']).to be_nil
           expect(r.env['did_inner_run_2']).to be_truthy
         end
@@ -457,7 +444,7 @@ describe MessageRouter::Router do
         Class.new MessageRouter::Router do
           include MyTestHelper
           match :lookup_human_name do
-            $is_john = env['human_name'] == 'John'
+            env['is_john'] = env['human_name'] == 'John'
           end
 
           match 'run_a' => 'block' do
@@ -485,7 +472,7 @@ describe MessageRouter::Router do
       it 'can access/modify the env via #env' do
         r = router.call({'id' => 1})
         expect(r.matched?).to be_truthy
-        expect($is_john).to be_truthy            # Prove the inner matcher can see the new value
+        expect(r.env['is_john']).to be_truthy    # Prove the inner matcher can see the new value
         expect(r.env['human_name']).to eq 'John' # Prove we can get at the value after the router has finished.
       end
 
