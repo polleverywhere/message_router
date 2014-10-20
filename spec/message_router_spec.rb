@@ -116,31 +116,17 @@ describe MessageRouter::Router do
 
       describe 'matching an Array' do
         it "doesn't run the 'action' block multiple times if there are multiple matches" do
-          $run_count = 0
+          run = double
+          expect(run).to receive(:count).once
           router = Class.new(MessageRouter::Router) do
             match [true, true] do
-              $run_count += 1
-              nil # Return nil to ensure this matcher failed.
+              run.count
+              not_matched
             end
           end
-
-          router.call({})
-          expect($run_count).to eq 1
-        end
-
-        it "returns nil if the 'action' block returns nil" do
-          $run_count = 0
-          router = Class.new(MessageRouter::Router) do
-            match [true, true] do
-              $run_count += 1
-              nil # Return nil to ensure this matcher failed.
-            end
-          end
-
           r = router.call({})
-          expect(r.matched?).to be_truthy
+          expect(r.matched?).to be_falsey
         end
-
       end
 
       describe 'matching a hash' do
@@ -378,45 +364,51 @@ describe MessageRouter::Router do
     describe 'nested routers' do
       def main_router
         Class.new(MessageRouter::Router) do
+          attr_accessor :outer_matcher, :inner_matcher
+
           sub_router = Class.new(MessageRouter::Router) do
-            match($inner_matcher) { $did_inner_run = true }
+            attr_accessor :inner_matcher
+            match(:inner_matcher) { env['did_inner_run'] = true }
           end
 
-          match $outer_matcher do
-            $did_outer_run = true
-            sub_router.call(env)
+          match :outer_matcher do
+            env['did_outer_run'] = true
+            r = sub_router.new(env).tap do |r|
+              r.inner_matcher = self.inner_matcher
+            end.run
           end
         end
       end
 
-      before do
-        $outer_matcher = $inner_matcher = $did_outer_run = $did_inner_run = nil
-      end
-
       it 'runs both when both match' do
-        $outer_matcher = $inner_matcher = true
+        r = main_router.new({}).tap do |r|
+          r.outer_matcher = true
+          r.inner_matcher = true
+        end.run
 
-        expect(main_router.call({})).to be_truthy
-        expect($did_outer_run).to be_truthy
-        expect($did_inner_run).to be_truthy
+        expect(r.env['did_outer_run']).to be_truthy
+        expect(r.env['did_inner_run']).to be_truthy
       end
 
       it "runs outer only when outer matches and inner doesn't" do
-        $outer_matcher = true
-        $inner_matcher = false
-
-        main_router.call({})
-        expect($did_outer_run).to be_truthy
-        expect($did_inner_run).to be_nil
+        r = main_router.new({}).tap do |r|
+          r.outer_matcher = true
+          r.inner_matcher = false
+        end.run
+        expect(r.env['did_outer_run']).to be_truthy
+        expect(r.env['did_inner_run']).to be_nil
       end
 
       it "runs neither when inner matches and outer doesn't" do
         $outer_matcher = false
         $inner_matcher = true
 
-        main_router.call({})
-        expect($did_outer_run).to be_nil
-        expect($did_inner_run).to be_nil
+        r = main_router.new({}).tap do |r|
+          r.outer_matcher = false
+          r.inner_matcher = true
+        end
+        expect(r.env['did_outer_run']).to be_nil
+        expect(r.env['did_inner_run']).to be_nil
       end
 
       context 'multiple inner matchers' do
@@ -428,10 +420,10 @@ describe MessageRouter::Router do
           Class.new MessageRouter::Router do
             # Define them
             sub_router_1 = Class.new MessageRouter::Router do
-              match($inner_matcher_1) { $did_inner_run_1 = true }
+              match($inner_matcher_1) { env['did_inner_run_1'] = true }
             end
             sub_router_2 = Class.new MessageRouter::Router do
-              match($inner_matcher_2) { $did_inner_run_2 = true }
+              match($inner_matcher_2) { env['did_inner_run_2'] = true }
             end
 
             # 'mount' them
@@ -443,20 +435,19 @@ describe MessageRouter::Router do
         it "runs only 1st outer and 1st inner when all match" do
           $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = true
 
-          expect(main_router.call({})).to be_truthy
-          expect($did_inner_run_1).to be_truthy
-          expect($did_inner_run_2).to be_nil
+          r = main_router.call({})
+          expect(r.env['did_inner_run_1']).to eq true
+          expect(r.env['did_inner_run_2']).to eq nil
         end
 
         it "runs both outers, and 2nd inner when all but 1st inner match" do
           $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_2 = true
           $inner_matcher_1 = false
 
-          expect(main_router.call({})).to be_truthy
-          expect($did_inner_run_1).to be_nil
-          expect($did_inner_run_2).to be_truthy
+          r = main_router.call({})
+          expect(r.env['did_inner_run_1']).to be_nil
+          expect(r.env['did_inner_run_2']).to be_truthy
         end
-
       end
     end
 
