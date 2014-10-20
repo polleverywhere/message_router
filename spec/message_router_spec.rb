@@ -257,8 +257,8 @@ describe MessageRouter::Router do
       end
 
       it "calls the matcher's code" do
-        subject.call(env = {})
-        expect(env[:did_it_run]).to be_truthy
+        r = subject.call(env = {})
+        expect(r.env[:did_it_run]).to be_truthy
       end
     end
 
@@ -276,8 +276,8 @@ describe MessageRouter::Router do
       end
 
       it "calls the matcher's code" do
-        subject.call(env = {})
-        expect(env[:did_it_run]).to be_truthy
+        r = subject.call(env = {})
+        expect(r.env[:did_it_run]).to be_truthy
       end
     end
 
@@ -351,48 +351,31 @@ describe MessageRouter::Router do
     end
 
     describe 'nested routers' do
-      def main_router
+      def main_router(matcher_opts = {})
         Class.new(MessageRouter::Router) do
-          attr_accessor :outer_matcher, :inner_matcher
-
           sub_router = Class.new(MessageRouter::Router) do
-            attr_accessor :inner_matcher
-            match(:inner_matcher) { env['did_inner_run'] = true }
+            match { not_matched; env['did_outer_run'] = true }
+            match(matcher_opts[:inner]) { env['did_inner_run'] = true }
           end
 
-          match :outer_matcher do
-            env['did_outer_run'] = true
-            r = sub_router.new(env).tap do |r|
-              r.inner_matcher = self.inner_matcher
-            end.run
-          end
+          match matcher_opts[:outer] => sub_router
         end
       end
 
       it 'runs both when both match' do
-        r = main_router.new({}).tap do |r|
-          r.outer_matcher = true
-          r.inner_matcher = true
-        end.run
-
+        r = main_router(:outer => true, :inner => true).call({})
         expect(r.env['did_outer_run']).to be_truthy
         expect(r.env['did_inner_run']).to be_truthy
       end
 
       it "runs outer only when outer matches and inner doesn't" do
-        r = main_router.new({}).tap do |r|
-          r.outer_matcher = true
-          r.inner_matcher = false
-        end.run
+        r = main_router(:outer => true, :inner => false).call({})
         expect(r.env['did_outer_run']).to be_truthy
         expect(r.env['did_inner_run']).to be_nil
       end
 
       it "runs neither when inner matches and outer doesn't" do
-        r = main_router.new({}).tap do |r|
-          r.outer_matcher = false
-          r.inner_matcher = true
-        end
+        r = main_router(:outer => false, :inner => true).call({})
         expect(r.env['did_outer_run']).to be_nil
         expect(r.env['did_inner_run']).to be_nil
       end

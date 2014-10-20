@@ -219,7 +219,7 @@ class MessageRouter
     # create your subclass, if you want to add your own initializer, it is very
     # important to call `super` or none of your rules will be matched.
     def initialize(env) #:nodoc:
-      @env = env
+      @env = env.dup
       # a parent router may be assuming a successful match
       # but this subrouter may not, so we explicitly set it to not matched
       # on creation
