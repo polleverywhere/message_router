@@ -7,7 +7,7 @@ describe MessageRouter::Router do
     describe '1st argument' do
       before do
         # For use in confirming whether or not a proc was called.
-        $thing_to_match = $did_it_run = nil
+        $thing_to_match = nil
       end
 
       let :env do
@@ -22,7 +22,7 @@ describe MessageRouter::Router do
       # $thing_to_match can change within a test.
       def router
         Class.new MessageRouter::Router do
-          match($thing_to_match) { $did_it_run = true }
+          match($thing_to_match) { env['did_it_run'] = true }
 
           # Using these methods also proves that the message is optionally
           # passed to helper methods.
@@ -38,14 +38,12 @@ describe MessageRouter::Router do
       let :the_test do
         Proc.new do |opts|
           $thing_to_match = opts[:true]
-          router.call(env)
-          expect($did_it_run).to eq true
-          $did_it_run = nil # reset for next time
+          r = router.call(env.dup)
+          expect(r.env['did_it_run']).to eq true
 
           $thing_to_match = opts[:false]
-          router.call(env)
-          expect($did_it_run).to eq nil
-          $did_it_run = nil # reset for next time
+          r = router.call(env.dup)
+          expect(r.env['did_it_run']).to eq nil
         end
       end
 
