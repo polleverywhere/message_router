@@ -92,7 +92,9 @@ describe MessageRouter::Router do
         end
         it "does not match strings against the 'body' attribute" do
           env = { 'body' => 'cheese please' }
-          router.call(env).should be_nil
+          r = router.new(env)
+          r.run
+          r.matched?.should be_false
         end
 
         it 'accepts a regex to match against the default attribute' do
@@ -102,7 +104,9 @@ describe MessageRouter::Router do
         end
         it "does not match regex against the 'body' attribute" do
           env = { 'body' => 'i like beans a lot' }
-          router.call(env).should be_nil
+          r = router.new(env)
+          r.run
+          r.matched?.should be_false
         end
       end
 
@@ -137,7 +141,9 @@ describe MessageRouter::Router do
             end
           end
 
-          router.call({}).should == nil
+          r = router.new({})
+          r.run
+          r.matched?.should be_true
         end
 
       end
@@ -264,9 +270,10 @@ describe MessageRouter::Router do
 
 
   describe "#call" do
-    it "returns nil with no rules" do
-      r = MessageRouter::Router
-      r.call({}).should be_nil
+    it "does not match with no rules" do
+      router = MessageRouter::Router.new({})
+      router.run
+      router.matched?.should be_false
     end
 
     context 'a rule matches' do
@@ -342,6 +349,41 @@ describe MessageRouter::Router do
       end
     end
 
+    describe "explicitly not matching" do
+      let(:router) do
+        Class.new(MessageRouter::Router) do
+          match do
+            not_matched
+          end
+        end
+      end
+
+      it "sets matched to false in env" do
+        r = router.new({})
+        r.run
+        r.matched?.should be_false
+      end
+    end
+
+    describe "explicitly matching" do
+      let(:router) do
+        Class.new(MessageRouter::Router) do
+          match do
+            not_matched
+          end
+          match do
+            matched
+          end
+        end
+      end
+
+      it "sets matched to true in env" do
+        r = router.new({})
+        r.run
+        r.matched?.should be_true
+      end
+    end
+
     describe 'nested routers' do
       def main_router
         Class.new(MessageRouter::Router) do
@@ -372,7 +414,7 @@ describe MessageRouter::Router do
         $outer_matcher = true
         $inner_matcher = false
 
-        main_router.call({}).should be_nil
+        main_router.call({})
         $did_outer_run.should be_true
         $did_inner_run.should be_nil
       end
@@ -381,7 +423,7 @@ describe MessageRouter::Router do
         $outer_matcher = false
         $inner_matcher = true
 
-        main_router.call({}).should be_nil
+        main_router.call({})
         $did_outer_run.should be_nil
         $did_inner_run.should be_nil
       end
@@ -402,15 +444,8 @@ describe MessageRouter::Router do
             end
 
             # 'mount' them
-            match $outer_matcher_1 do
-              $did_outer_run_1 = true
-              sub_router_1.call(env)
-            end
-
-            match $outer_matcher_2 do
-              $did_outer_run_2 = true
-              sub_router_2.call(env)
-            end
+            match $outer_matcher_1 => sub_router_1
+            match $outer_matcher_2 => sub_router_2
           end
         end
 
@@ -418,8 +453,6 @@ describe MessageRouter::Router do
           $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = true
 
           main_router.call({}).should be_true
-          $did_outer_run_1.should be_true
-          $did_outer_run_2.should be_nil
           $did_inner_run_1.should be_true
           $did_inner_run_2.should be_nil
         end
@@ -429,8 +462,6 @@ describe MessageRouter::Router do
           $inner_matcher_1 = false
 
           main_router.call({}).should be_true
-          $did_outer_run_1.should be_true
-          $did_outer_run_2.should be_true
           $did_inner_run_1.should be_nil
           $did_inner_run_2.should be_true
         end
