@@ -220,8 +220,9 @@ class MessageRouter
     # important to call `super` or none of your rules will be matched.
     def initialize(env) #:nodoc:
       @env = env
-      # the parent router may be assuming a successful match
-      # but this subrouter may not, so we explicitly set it to not matched on creation
+      # a parent router may be assuming a successful match
+      # but this subrouter may not, so we explicitly set it to not matched
+      # on creation
       not_matched
       @rules = []
       # Actually create the rules so that the procs we create are in the
@@ -232,7 +233,9 @@ class MessageRouter
       self.class.rules.each {|rule| match *rule }
 
       @prerequisites = []
-      self.class.prerequisites.each {|prerequisite| @prerequisites << normalize_match_params(prerequisite) }
+      self.class.prerequisites.each do |prerequisite|
+        @prerequisites << normalize_match_params(prerequisite)
+      end
     end
 
     def run #:nodoc:

@@ -413,7 +413,7 @@ describe MessageRouter::Router do
 
       context 'multiple inner matchers' do
         before do
-          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = $did_outer_run_1 = $did_outer_run_2 = $did_inner_run_1 = $did_inner_run_2 = nil
+          $outer_matcher_1 = $outer_matcher_2 = $inner_matcher_1 = $inner_matcher_2 = nil
         end
 
         def main_router
