@@ -13,4 +13,5 @@ group :test, :development do
   gem 'growl'
   gem 'guard'
   gem 'guard-rspec'
+  gem 'simplecov', require: false
 end
