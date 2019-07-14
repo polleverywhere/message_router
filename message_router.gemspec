@@ -10,8 +10,6 @@ Gem::Specification.new do |s|
   s.summary     = %q{Route messages}
   s.description = %q{a DSL for routing SMS, Twitter, and other short message formats.}
 
-  s.rubyforge_project = "message_router"
-
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
